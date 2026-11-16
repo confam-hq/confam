@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Poppins", sans-serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* iZPAY Color System */
+  --color-iz-bg: #0B0B10;
+  --color-iz-surface: #13131F;
+  --color-iz-surface-light: #1A1A2E;
+  --color-iz-violet: #7C5CFC;
+  --color-iz-violet-light: #9B82FF;
+  --color-iz-mint: #10B981;
+  --color-iz-amber: #F59E0B;
+  --color-iz-coral: #EF4444;
+  --color-iz-muted: #9496A1;
+}
+
+@layer base {
+  body {
+    background-color: #0B0B10;
+    color: #FFFFFF;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* iZPAY Signature Service Card with Top-Left Violet Glow */
+.iz-card {
+  background: linear-gradient(145deg, rgba(124, 92, 252, 0.12) 0%, rgba(19, 19, 31, 0.92) 48%, rgba(15, 15, 24, 0.98) 100%);
+  border: 1px solid rgba(139, 115, 255, 0.16);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+  transition: transform 200ms ease, border-color 200ms ease;
+}
+
+.iz-card:hover {
+  border-color: rgba(124, 92, 252, 0.38);
+}
+
+.iz-panel {
+  background-color: #13131F;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+}
+
+/* iZPAY Pill Buttons */
+.iz-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #8B6EFE 0%, #6E4BEB 100%);
+  color: #FFFFFF;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px -5px rgba(124, 92, 252, 0.5);
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.iz-btn-pill:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -5px rgba(124, 92, 252, 0.7);
+}
+
+.iz-btn-pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.iz-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: rgba(124, 92, 252, 0.1);
+  color: #B6A4FF;
+  border: 1px solid rgba(124, 92, 252, 0.3);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.iz-btn-outline:hover {
+  background-color: rgba(124, 92, 252, 0.2);
+  color: #FFFFFF;
+}
+
+/* iZPAY Inputs */
+.iz-input {
+  width: 100%;
+  background-color: #0B0B10;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.8125rem;
+  color: #FFFFFF;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.iz-input::placeholder {
+  color: #6E7180;
+}
+
+.iz-input:focus {
+  outline: none;
+  border-color: #7C5CFC;
+  box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.2);
+}
+
+/* iZPAY Slanted Testimonial / Banner Card */
+.iz-slanted-banner {
+  background: linear-gradient(135deg, #8B6EFE 0%, #6A48E6 100%);
+  border-radius: 1.5rem;
+  transform: rotate(-1.2deg);
+  box-shadow: 0 25px 50px -12px rgba(124, 92, 252, 0.35);
+}
