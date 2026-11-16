@@ -1,10 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
   Camera,
-  Upload,
   CheckCircle2,
   RefreshCw,
-  Sparkles,
   MapPin,
   FileVideo,
   ScanText,

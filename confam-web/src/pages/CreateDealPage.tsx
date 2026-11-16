@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dealApi } from '../api/dealApi';
 import { formatNaira } from '../utils/formatNaira';
-import { ShieldCheck, Sparkles, Loader2, CheckCircle2, Building2 } from 'lucide-react';
+import { ShieldCheck, Sparkles, Loader2, Building2 } from 'lucide-react';
 
 const NIGERIAN_BANKS = [
   { code: '058', name: 'Guaranty Trust Bank (GTBank)' },

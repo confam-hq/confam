@@ -6,12 +6,9 @@ import { formatNaira } from '../../../utils/formatNaira';
 import {
   Search,
   ShieldCheck,
-  Truck,
   KeyRound,
   ArrowUpRight,
-  Lock,
   Video,
-  CheckCircle2,
 } from 'lucide-react';
 
 export const BuyerDashboard: React.FC = () => {

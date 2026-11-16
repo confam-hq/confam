@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { dealApi } from '../api/dealApi';
-import { Deal, EscrowStatus } from '../types/deal.types';
+import type { Deal, EscrowStatus } from '../types/deal.types';
 import { formatNaira } from '../utils/formatNaira';
 import {
   Plus,
