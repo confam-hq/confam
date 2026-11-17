@@ -59,3 +59,26 @@ body {
   }
   .label { @apply mb-1.5 block text-xs font-medium text-muted; }
 }
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.float-slow { animation: float-y 6s ease-in-out infinite; }
+.float-slower { animation: float-y 8s ease-in-out infinite reverse; }
+
+@keyframes dash { to { stroke-dashoffset: -24; } }
+.route-dash { animation: dash 1.2s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .float-slow, .float-slower, .route-dash { animation: none; }
+}
