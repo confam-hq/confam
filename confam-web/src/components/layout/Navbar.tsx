@@ -3,9 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { LogOut, Search } from "lucide-react";
 import ConfamLogo from "./ConfamLogo";
 import ThemeToggle from "./ThemeToggle";
-import Select from "../ui/Select";
 import { useAuth, homeFor } from "../../context/AuthContext";
-import type { Role } from "../../types/deal.types";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -50,18 +48,6 @@ export default function Navbar() {
         <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
-              <Select
-                compact
-                align="right"
-                className="hidden w-32 sm:block"
-                value={user.role}
-                onChange={(r) => nav(homeFor(r as Role))}
-                options={[
-                  { value: "vendor", label: "Vendor" },
-                  { value: "buyer", label: "Buyer" },
-                  { value: "admin", label: "Admin" },
-                ]}
-              />
               <ThemeToggle />
               <button
                 onClick={() => { logout(); nav("/"); }}

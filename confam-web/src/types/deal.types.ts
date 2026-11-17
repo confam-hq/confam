@@ -1,4 +1,5 @@
 export type Role = "vendor" | "buyer" | "admin";
+export type DeliveryMode = "LOCAL_DISPATCH" | "INTERSTATE_WAYBILL";
 export type DealStatus = "pending" | "escrow_locked" | "in_transit" | "settled" | "disputed" | "refunded";
 
 export interface User {
@@ -7,6 +8,10 @@ export interface User {
   email: string;
   phone?: string;
   role: Role;
+  bank_code?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  account_name?: string | null;
 }
 
 export interface LedgerEvent {
@@ -48,10 +53,21 @@ export interface Deal {
 }
 
 export interface CreateDealPayload {
-  title: string;
-  description?: string;
-  amount: number;
-  buyer_phone?: string;
+  vendor_name: string;
+  vendor_phone: string;
+  vendor_email: string;
+  vendor_bank_code: string;
+  vendor_bank_name?: string;
+  vendor_account_number: string;
+  vendor_account_name: string;
+  buyer_name?: string;
+  buyer_phone: string;
+  buyer_email: string;
+  item_title: string;
+  item_description?: string;
+  item_amount_naira: number;
+  waybill_fee_naira?: number;
+  delivery_mode: DeliveryMode;
 }
 
 export interface Bank { code: string; name: string }

@@ -1,32 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Copy, MessageCircle } from "lucide-react";
-import { dealApi } from "../api/dealApi";
-import { errMsg } from "../api/client";
 import { formatNaira } from "../utils/formatNaira";
 import type { Deal } from "../types/deal.types";
+import CreateDealForm from "./dashboard/vendor/CreateDealForm";
 
 export default function CreateDealPage() {
-  const [f, setF] = useState({ title: "", description: "", amount: "", buyer_phone: "" });
   const [deal, setDeal] = useState<Deal | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
 
   const link = deal ? `${window.location.origin}/deal/${deal.code}` : "";
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setErr("");
-    try {
-      setDeal(await dealApi.create({ ...f, amount: Number(f.amount) }));
-    } catch (x) {
-      setErr(errMsg(x));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const copy = async () => {
     await navigator.clipboard.writeText(link);
@@ -56,17 +39,10 @@ export default function CreateDealPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-10">
-      <form onSubmit={submit} className="card space-y-4 p-6">
+      <div className="card space-y-4 p-6">
         <h1 className="text-lg font-semibold">New escrow deal</h1>
-        <div><label className="label">What are you selling?</label><input required className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
-        <div><label className="label">Details (optional)</label><textarea rows={3} className="input" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div><label className="label">Amount (₦)</label><input required inputMode="numeric" className="input font-mono-tabular" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/\D/g, "") })} /></div>
-          <div><label className="label">Buyer phone</label><input inputMode="tel" className="input" value={f.buyer_phone} onChange={(e) => setF({ ...f, buyer_phone: e.target.value })} /></div>
-        </div>
-        {err && <p className="text-xs text-red-500">{err}</p>}
-        <button disabled={busy} className="btn-primary w-full">{busy ? "Generating…" : "Generate escrow link"}</button>
-      </form>
+        <CreateDealForm onCreated={setDeal} submitLabel="Generate escrow link" />
+      </div>
     </div>
   );
 }

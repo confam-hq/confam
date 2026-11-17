@@ -1,41 +1,40 @@
-import { useState } from "react";
 import { X } from "lucide-react";
-import { dealApi } from "../../../api/dealApi";
-import { errMsg } from "../../../api/client";
 import type { Deal } from "../../../types/deal.types";
+import CreateDealForm from "./CreateDealForm";
 
-export default function CreateDealModal({ onClose, onCreated }: { onClose: () => void; onCreated: (d: Deal) => void }) {
-  const [f, setF] = useState({ title: "", amount: "", buyer_phone: "" });
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      onCreated(await dealApi.create({ ...f, amount: Number(f.amount) }));
-      onClose();
-    } catch (x) {
-      setErr(errMsg(x));
-      setBusy(false);
-    }
-  };
-
+export default function CreateDealModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (deal: Deal) => void;
+}) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-black/60 sm:place-items-center sm:p-4">
-      <form onSubmit={submit} className="card w-full max-w-sm space-y-4 rounded-b-none p-5 sm:rounded-b-xl">
-        <div className="flex items-center justify-between">
-          <p className="font-medium">New deal</p>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-ink"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 grid min-h-full place-items-end overflow-y-auto bg-black/60 p-3 sm:place-items-center sm:p-4">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-deal-title"
+        className="card flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-b-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl"
+      >
+        <header className="flex shrink-0 items-center justify-between border-b border-line px-5 py-4">
+          <div>
+            <h1 id="create-deal-title" className="font-semibold">New deal</h1>
+            <p className="mt-0.5 text-xs text-muted">Create a secure escrow link for your buyer.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
+            <X size={18} />
+          </button>
+        </header>
+        <div className="min-h-0 overflow-y-auto p-5 sm:p-6">
+          <CreateDealForm
+            onCreated={(deal) => {
+              onCreated(deal);
+              onClose();
+            }}
+          />
         </div>
-        <div><label className="label">Item</label><input required className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div><label className="label">Amount (₦)</label><input required inputMode="numeric" className="input font-mono-tabular" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/\D/g, "") })} /></div>
-          <div><label className="label">Buyer phone</label><input inputMode="tel" className="input" value={f.buyer_phone} onChange={(e) => setF({ ...f, buyer_phone: e.target.value })} /></div>
-        </div>
-        {err && <p className="text-xs text-red-500">{err}</p>}
-        <button disabled={busy} className="btn-primary w-full">{busy ? "Creating…" : "Create deal"}</button>
-      </form>
+      </section>
     </div>
   );
 }

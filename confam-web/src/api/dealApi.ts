@@ -1,6 +1,35 @@
 import { api } from "./client";
 import type { Bank, CreateDealPayload, Deal, User, Waybill } from "../types/deal.types";
 
+type CreatedDealStatus =
+  | "AWAITING_PAYMENT"
+  | "FUNDED_LOCKED"
+  | "DISPATCHED_IN_TRANSIT"
+  | "COMPLETED_RELEASED"
+  | "DISPUTE_FROZEN"
+  | "REFUNDED";
+
+interface CreatedDealResponse {
+  deal: {
+    short_code: string;
+    status: CreatedDealStatus;
+    item: { title: string; description: string | null };
+    financials: { item_amount_naira: number };
+    vendor: { name: string };
+    buyer: { name: string; email: string };
+    timestamps: { created_at: string | null };
+  };
+}
+
+const dealStatus: Record<CreatedDealStatus, Deal["status"]> = {
+  AWAITING_PAYMENT: "pending",
+  FUNDED_LOCKED: "escrow_locked",
+  DISPATCHED_IN_TRANSIT: "in_transit",
+  COMPLETED_RELEASED: "settled",
+  DISPUTE_FROZEN: "disputed",
+  REFUNDED: "refunded",
+};
+
 // NOTE: adjust the paths below if your Laravel routes differ.
 export const authApi = {
   login: (email: string, password: string) =>
@@ -28,7 +57,23 @@ export const authApi = {
 export const dealApi = {
   list: () => api.get<{ data: Deal[] }>("/deals").then((r) => r.data.data),
   get: (code: string) => api.get<{ data: Deal }>(`/deals/${code}`).then((r) => r.data.data),
-  create: (p: CreateDealPayload) => api.post<{ data: Deal }>("/deals", p).then((r) => r.data.data),
+  create: (payload: CreateDealPayload) =>
+    api.post<CreatedDealResponse>("/deals", payload).then(({ data }) => {
+      const { deal } = data;
+      return {
+        id: deal.short_code,
+        code: deal.short_code,
+        title: deal.item.title,
+        description: deal.item.description ?? undefined,
+        amount: deal.financials.item_amount_naira,
+        status: dealStatus[deal.status],
+        vendor_name: deal.vendor.name,
+        buyer_name: deal.buyer.name,
+        buyer_email: deal.buyer.email,
+        events: [],
+        created_at: deal.timestamps.created_at ?? new Date().toISOString(),
+      };
+    }),
 
   initPayment: (code: string, email: string) =>
     api

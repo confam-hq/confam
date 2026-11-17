@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
+import DashboardShell from "./components/layout/DashboardShell";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -12,7 +13,7 @@ import VendorDashboard from "./pages/dashboard/vendor/VendorDashboard";
 import BuyerDashboard from "./pages/dashboard/buyers/BuyerDashboard";
 import AdminDashboard from "./pages/dashboard/admin/AdminDashboard";
 
-function Shell() {
+function MarketingShell() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -27,26 +28,31 @@ function Shell() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<Shell />}>
+      <Route element={<MarketingShell />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/deal/:code" element={<DealRoomPage />} />
         <Route path="/ping/:token" element={<DriverPingPage />} />
+      </Route>
 
-        <Route element={<ProtectedRoute roles={["vendor"]} />}>
+      <Route element={<ProtectedRoute roles={["vendor"]} />}>
+        <Route element={<DashboardShell />}>
           <Route path="/dashboard/vendor" element={<VendorDashboard />} />
           <Route path="/deals/new" element={<CreateDealPage />} />
         </Route>
-        <Route element={<ProtectedRoute roles={["buyer"]} />}>
+      </Route>
+      <Route element={<ProtectedRoute roles={["buyer"]} />}>
+        <Route element={<DashboardShell />}>
           <Route path="/dashboard/buyer" element={<BuyerDashboard />} />
         </Route>
-        <Route element={<ProtectedRoute roles={["admin"]} />}>
+      </Route>
+      <Route element={<ProtectedRoute roles={["admin"]} />}>
+        <Route element={<DashboardShell />}>
           <Route path="/dashboard/admin" element={<AdminDashboard />} />
         </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
