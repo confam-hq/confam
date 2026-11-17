@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { openPaystack } from "../../utils/paystackPopup";
-import { dealApi, errMsg } from "../../api/dealApi";
+import { dealApi } from "../../api/dealApi";
+import { errMsg } from "../../api/client";
 import { formatNaira } from "../../utils/formatNaira";
 import type { Deal } from "../../types/deal.types";
 
