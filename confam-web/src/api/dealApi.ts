@@ -1,7 +1,7 @@
 import { api } from "./client";
 import type { Bank, CreateDealPayload, Deal, User, Waybill } from "../types/deal.types";
 
-type CreatedDealStatus =
+type ApiDealStatus =
   | "AWAITING_PAYMENT"
   | "FUNDED_LOCKED"
   | "DISPATCHED_IN_TRANSIT"
@@ -9,25 +9,94 @@ type CreatedDealStatus =
   | "DISPUTE_FROZEN"
   | "REFUNDED";
 
-interface CreatedDealResponse {
+interface ApiDealResponse {
   deal: {
     short_code: string;
-    status: CreatedDealStatus;
+    status: ApiDealStatus;
     item: { title: string; description: string | null };
     financials: { item_amount_naira: number };
     vendor: { name: string };
-    buyer: { name: string; email: string };
+    buyer: { name: string; phone_masked: string; email: string };
+    proof_artifact: {
+      video_url: string;
+      video_sha256_hash: string;
+      ai_confidence_score: number | null;
+    } | null;
+    waybill_manifest: {
+      transport_company: string | null;
+      waybill_number: string | null;
+      driver_phone: string | null;
+      vehicle_plate: string | null;
+      origin_park: string | null;
+      destination_park: string | null;
+      driver_ping_url: string;
+      last_known_lat: number | null;
+      last_known_lng: number | null;
+      last_pinged_at: string | null;
+    } | null;
+    ledgers: { id: number; event_type: string; actor_role: string; created_at: string | null }[];
     timestamps: { created_at: string | null };
   };
 }
 
-const dealStatus: Record<CreatedDealStatus, Deal["status"]> = {
+const dealStatus: Record<ApiDealStatus, Deal["status"]> = {
   AWAITING_PAYMENT: "pending",
   FUNDED_LOCKED: "escrow_locked",
   DISPATCHED_IN_TRANSIT: "in_transit",
   COMPLETED_RELEASED: "settled",
   DISPUTE_FROZEN: "disputed",
   REFUNDED: "refunded",
+};
+
+const mapApiDeal = (deal: ApiDealResponse["deal"]): Deal => {
+  const manifest = deal.waybill_manifest;
+  const pingPath = manifest?.driver_ping_url.split("/").filter(Boolean) ?? [];
+  const pingToken = pingPath[pingPath.length - 1];
+
+  return {
+    id: deal.short_code,
+    code: deal.short_code,
+    title: deal.item.title,
+    description: deal.item.description ?? undefined,
+    amount: deal.financials.item_amount_naira,
+    status: dealStatus[deal.status],
+    vendor_name: deal.vendor.name,
+    buyer_name: deal.buyer.name,
+    buyer_phone: deal.buyer.phone_masked,
+    buyer_email: deal.buyer.email,
+    proof_video_url: deal.proof_artifact?.video_url ?? null,
+    ai_match: deal.proof_artifact?.ai_confidence_score ?? null,
+    sha256: deal.proof_artifact?.video_sha256_hash ?? null,
+    waybill: manifest
+      ? {
+          route:
+            [manifest.origin_park, manifest.destination_park].filter(Boolean).join(" → ") ||
+            manifest.transport_company ||
+            manifest.waybill_number ||
+            "Waybill",
+          park: manifest.origin_park ?? undefined,
+          plate: manifest.vehicle_plate ?? undefined,
+          driver_name: manifest.transport_company ?? undefined,
+          driver_phone: manifest.driver_phone ?? undefined,
+          ping_token: pingToken,
+          last_ping:
+            manifest.last_known_lat !== null && manifest.last_known_lng !== null
+              ? {
+                  lat: manifest.last_known_lat,
+                  lng: manifest.last_known_lng,
+                  at: manifest.last_pinged_at ?? "",
+                }
+              : null,
+        }
+      : null,
+    events: deal.ledgers.map((event) => ({
+      id: event.id,
+      label: event.event_type,
+      detail: event.actor_role,
+      at: event.created_at ?? "",
+    })),
+    created_at: deal.timestamps.created_at ?? new Date().toISOString(),
+  };
 };
 
 // NOTE: adjust the paths below if your Laravel routes differ.
@@ -56,24 +125,9 @@ export const authApi = {
 
 export const dealApi = {
   list: () => api.get<{ data: Deal[] }>("/deals").then((r) => r.data.data),
-  get: (code: string) => api.get<{ data: Deal }>(`/deals/${code}`).then((r) => r.data.data),
+  get: (code: string) => api.get<ApiDealResponse>(`/deals/${code}`).then((r) => mapApiDeal(r.data.deal)),
   create: (payload: CreateDealPayload) =>
-    api.post<CreatedDealResponse>("/deals", payload).then(({ data }) => {
-      const { deal } = data;
-      return {
-        id: deal.short_code,
-        code: deal.short_code,
-        title: deal.item.title,
-        description: deal.item.description ?? undefined,
-        amount: deal.financials.item_amount_naira,
-        status: dealStatus[deal.status],
-        vendor_name: deal.vendor.name,
-        buyer_name: deal.buyer.name,
-        buyer_email: deal.buyer.email,
-        events: [],
-        created_at: deal.timestamps.created_at ?? new Date().toISOString(),
-      };
-    }),
+    api.post<ApiDealResponse>("/deals", payload).then(({ data }) => mapApiDeal(data.deal)),
 
   initPayment: (code: string, email: string) =>
     api
