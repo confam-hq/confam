@@ -8,11 +8,21 @@ export const authApi = {
   register: (payload: Record<string, any>) =>
     api.post<{ token: string; user: User }>("/auth/register", payload).then((r) => r.data),
   me: () => api.get<{ user: User }>("/auth/me").then((r) => r.data.user),
-  banks: () => api.get<{ data: Bank[] }>("/banks").then((r) => r.data.data),
+     banks: () =>
+    api.get<any>("/banks").then((r) => {
+      const raw: any[] = Array.isArray(r.data) ? r.data : r.data?.data ?? r.data?.banks ?? [];
+      const m = new Map<string, Bank>();
+      raw.forEach((b) => m.set(String(b.code), { code: String(b.code), name: b.name }));
+      return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
+    }),
+
   resolveBank: (account_number: string, bank_code: string) =>
-    api
-      .post<{ account_name: string }>("/banks/resolve", { account_number, bank_code })
-      .then((r) => r.data),
+    api.post<any>("/banks/resolve", { account_number, bank_code }).then((r) => {
+      const d = r.data?.data ?? r.data;
+      const account_name = d?.account_name ?? d?.accountName;
+      if (!account_name) throw new Error("Could not resolve account");
+      return { account_name: String(account_name) };
+    }),
 };
 
 export const dealApi = {

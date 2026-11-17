@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { LogOut, Search } from "lucide-react";
 import ConfamLogo from "./ConfamLogo";
 import ThemeToggle from "./ThemeToggle";
+import Select from "../ui/Select";
 import { useAuth, homeFor } from "../../context/AuthContext";
 import type { Role } from "../../types/deal.types";
 
@@ -36,37 +37,31 @@ export default function Navbar() {
   const search = (
     <form onSubmit={lookup} className="relative w-full">
       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-      <input
-        ref={ref}
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Look up deal code"
-        className="input pl-9 pr-12"
-      />
-      <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 py-0.5 text-[10px] text-muted sm:block">
-        ⌘K
-      </kbd>
+      <input ref={ref} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Look up deal code" className="input pl-9 pr-12" />
+      <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 py-0.5 text-[10px] text-muted sm:block">⌘K</kbd>
     </form>
   );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-canvas/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-canvas/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
-        <Link to={user ? homeFor(user.role) : "/"}><ConfamLogo /></Link>
+        <Link to={user ? homeFor(user.role) : "/"}><ConfamLogo size={32} /></Link>
         <div className="mx-4 hidden max-w-sm flex-1 md:block">{search}</div>
         <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
-              <select
+              <Select
+                compact
+                align="right"
+                className="hidden w-32 sm:block"
                 value={user.role}
-                onChange={(e) => nav(homeFor(e.target.value as Role))}
-                className="input hidden w-auto py-1.5 sm:block"
-                aria-label="Switch role view"
-              >
-                <option value="vendor">Vendor</option>
-                <option value="buyer">Buyer</option>
-                <option value="admin">Admin</option>
-              </select>
+                onChange={(r) => nav(homeFor(r as Role))}
+                options={[
+                  { value: "vendor", label: "Vendor" },
+                  { value: "buyer", label: "Buyer" },
+                  { value: "admin", label: "Admin" },
+                ]}
+              />
               <ThemeToggle />
               <button
                 onClick={() => { logout(); nav("/"); }}
