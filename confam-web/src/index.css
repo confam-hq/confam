@@ -1,135 +1,61 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --font-display: "Poppins", sans-serif;
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
-
-  /* iZPAY Color System */
-  --color-iz-bg: #0B0B10;
-  --color-iz-surface: #13131F;
-  --color-iz-surface-light: #1A1A2E;
-  --color-iz-violet: #7C5CFC;
-  --color-iz-violet-light: #9B82FF;
-  --color-iz-mint: #10B981;
-  --color-iz-amber: #F59E0B;
-  --color-iz-coral: #EF4444;
-  --color-iz-muted: #9496A1;
+:root {
+  --canvas: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --line: #e2e8f0;
+  --ink: #09090b;
+  --muted: #64748b;
+}
+.dark {
+  --canvas: #09090b;
+  --surface: #121215;
+  --surface-2: #18181b;
+  --line: #27272a;
+  --ink: #fafafa;
+  --muted: #a1a1aa;
 }
 
-@layer base {
-  body {
-    background-color: #0B0B10;
-    color: #FFFFFF;
-    font-family: var(--font-sans);
-    overflow-x: hidden;
-  }
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: #10b981;
+  --color-brand-600: #059669;
+}
 
-  h1, h2, h3, h4, .font-display {
-    font-family: var(--font-display);
-  }
+html, body, #root { min-height: 100%; }
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .font-mono-tabular {
-  font-family: var(--font-mono);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
-/* iZPAY Signature Service Card with Top-Left Violet Glow */
-.iz-card {
-  background: linear-gradient(145deg, rgba(124, 92, 252, 0.12) 0%, rgba(19, 19, 31, 0.92) 48%, rgba(15, 15, 24, 0.98) 100%);
-  border: 1px solid rgba(139, 115, 255, 0.16);
-  border-radius: 1.25rem;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
-  transition: transform 200ms ease, border-color 200ms ease;
-}
-
-.iz-card:hover {
-  border-color: rgba(124, 92, 252, 0.38);
-}
-
-.iz-panel {
-  background-color: #13131F;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1rem;
-}
-
-/* iZPAY Pill Buttons */
-.iz-btn-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, #8B6EFE 0%, #6E4BEB 100%);
-  color: #FFFFFF;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 0.8125rem;
-  padding: 0.75rem 1.75rem;
-  border-radius: 9999px;
-  box-shadow: 0 10px 25px -5px rgba(124, 92, 252, 0.5);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.iz-btn-pill:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px -5px rgba(124, 92, 252, 0.7);
-}
-
-.iz-btn-pill:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.iz-btn-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background-color: rgba(124, 92, 252, 0.1);
-  color: #B6A4FF;
-  border: 1px solid rgba(124, 92, 252, 0.3);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 0.75rem;
-  padding: 0.625rem 1.25rem;
-  border-radius: 9999px;
-  transition: all 150ms ease;
-  cursor: pointer;
-}
-
-.iz-btn-outline:hover {
-  background-color: rgba(124, 92, 252, 0.2);
-  color: #FFFFFF;
-}
-
-/* iZPAY Inputs */
-.iz-input {
-  width: 100%;
-  background-color: #0B0B10;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
-  padding: 0.65rem 0.9rem;
-  font-size: 0.8125rem;
-  color: #FFFFFF;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.iz-input::placeholder {
-  color: #6E7180;
-}
-
-.iz-input:focus {
-  outline: none;
-  border-color: #7C5CFC;
-  box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.2);
-}
-
-/* iZPAY Slanted Testimonial / Banner Card */
-.iz-slanted-banner {
-  background: linear-gradient(135deg, #8B6EFE 0%, #6A48E6 100%);
-  border-radius: 1.5rem;
-  transform: rotate(-1.2deg);
-  box-shadow: 0 25px 50px -12px rgba(124, 92, 252, 0.35);
+@layer components {
+  .card { @apply rounded-xl border border-line bg-surface; }
+  .input {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink
+      placeholder:text-muted outline-none focus:border-brand focus:ring-1 focus:ring-brand;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm
+      font-medium text-white transition hover:bg-brand-600 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line px-4 py-2
+      text-sm font-medium text-ink transition hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .label { @apply mb-1.5 block text-xs font-medium text-muted; }
 }
