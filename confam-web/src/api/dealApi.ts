@@ -129,12 +129,15 @@ export const dealApi = {
   create: (payload: CreateDealPayload) =>
     api.post<ApiDealResponse>("/deals", payload).then(({ data }) => mapApiDeal(data.deal)),
 
-  initPayment: (code: string, email: string) =>
+  initPayment: (code: string, email: string, callbackUrl: string) =>
     api
-      .post<{ reference: string; access_code?: string; amount?: number }>(`/deals/${code}/pay`, { email })
+      .post<{
+        message: string;
+        checkout: { authorization_url: string; reference?: string };
+      }>(`/deals/${code}/pay`, { email, callback_url: callbackUrl })
       .then((r) => r.data),
   verifyPayment: (code: string, reference: string) =>
-    api.post(`/deals/${code}/pay/verify`, { reference }).then((r) => r.data),
+    api.post(`/deals/${code}/verify-payment`, { reference }).then((r) => r.data),
 
   uploadProof: (code: string, video: Blob, sha256: string, onProgress?: (p: number) => void) => {
     const fd = new FormData();

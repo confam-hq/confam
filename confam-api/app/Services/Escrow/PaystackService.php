@@ -51,7 +51,7 @@ class PaystackService
         return $response->json('data');
     }
 
-    public function initializeEscrowPayment(Deal $deal, string $callbackUrl): array
+    public function initializeEscrowPayment(Deal $deal, string $callbackUrl, string $email): array
     {
         $reference = 'CFM_' . $deal->short_code . '_' . strtoupper(Str::random(6));
         $deal->update(['paystack_reference' => $reference]);
@@ -68,7 +68,7 @@ class PaystackService
         $response = Http::withToken($this->secretKey)
             ->timeout(15)
             ->post("{$this->baseUrl}/transaction/initialize", [
-                'email'        => $deal->buyer_email,
+                'email'        => $email,
                 'amount'       => $deal->total_payable_kobo,
                 'reference'    => $reference,
                 'callback_url' => $callbackUrl,

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { openPaystack } from "../../utils/paystackPopup";
 import { dealApi } from "../../api/dealApi";
 import { errMsg } from "../../api/client";
 import { formatNaira } from "../../utils/formatNaira";
@@ -9,11 +8,9 @@ import type { Deal } from "../../types/deal.types";
 export default function PaystackModal({
   deal,
   onClose,
-  onPaid,
 }: {
   deal: Deal;
   onClose: () => void;
-  onPaid: () => void;
 }) {
   const [email, setEmail] = useState(deal.buyer_email ?? "");
   const [busy, setBusy] = useState(false);
@@ -23,18 +20,10 @@ export default function PaystackModal({
     setBusy(true);
     setErr("");
     try {
-      const init = await dealApi.initPayment(deal.code, email);
-      await openPaystack({
-        email,
-        amountNaira: deal.amount,
-        reference: init.reference,
-        accessCode: init.access_code,
-        onSuccess: async (ref) => {
-          await dealApi.verifyPayment(deal.code, ref);
-          onPaid();
-        },
-        onClose: () => setBusy(false),
-      });
+      const callbackUrl = new URL(`/deal/${encodeURIComponent(deal.code)}`, window.location.origin).toString();
+      const init = await dealApi.initPayment(deal.code, email, callbackUrl);
+      if (!init.checkout.authorization_url) throw new Error("Paystack did not return a checkout URL.");
+      window.location.assign(init.checkout.authorization_url);
     } catch (e) {
       setErr(errMsg(e, "Payment failed to start"));
       setBusy(false);

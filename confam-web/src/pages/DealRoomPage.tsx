@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { dealApi, } from "../api/dealApi";
 import { errMsg } from "../api/client";
@@ -15,7 +15,10 @@ import type { Deal } from "../types/deal.types";
 
 export default function DealRoomPage() {
   const { code = "" } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const verifiedPaymentReference = useRef<string | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [err, setErr] = useState("");
   const [pay, setPay] = useState(false);
@@ -28,6 +31,30 @@ export default function DealRoomPage() {
     [code]
   );
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const reference = new URLSearchParams(location.search).get("reference");
+    if (!reference || verifiedPaymentReference.current === reference) return;
+
+    verifiedPaymentReference.current = reference;
+    dealApi.verifyPayment(code, reference)
+      .then(() => {
+        const query = new URLSearchParams(location.search);
+        query.delete("reference");
+        query.delete("trxref");
+        query.delete("mock_paid");
+        const search = query.toString();
+        navigate(
+          { pathname: location.pathname, search: search ? `?${search}` : "" },
+          { replace: true }
+        );
+        return load();
+      })
+      .catch((e) => {
+        verifiedPaymentReference.current = null;
+        setErr(errMsg(e, "Could not verify payment"));
+      });
+  }, [code, load, location.pathname, location.search, navigate]);
 
   if (err) return <div className="grid min-h-[50vh] place-items-center text-sm text-muted">{err}</div>;
   if (!deal) return <div className="grid min-h-[50vh] place-items-center text-sm text-muted">Loading deal…</div>;
@@ -137,7 +164,7 @@ export default function DealRoomPage() {
         </div>
       </div>
 
-      {pay && <PaystackModal deal={deal} onClose={() => setPay(false)} onPaid={() => { setPay(false); load(); }} />}
+      {pay && <PaystackModal deal={deal} onClose={() => setPay(false)} />}
     </div>
   );
 }

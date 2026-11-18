@@ -20,11 +20,19 @@ class PaystackController extends Controller
     public function initialize(Request $request, string $short_code): JsonResponse
     {
         $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
+        $data = $request->validate([
+            'email'        => ['sometimes', 'required', 'email', 'max:120'],
+            'callback_url' => ['sometimes', 'required', 'url'],
+        ]);
 
         $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/');
-        $callbackUrl = $request->input('callback_url', "{$frontendUrl}/v/{$deal->short_code}");
+        $callbackUrl = $data['callback_url'] ?? "{$frontendUrl}/deal/{$deal->short_code}";
 
-        $checkoutData = $this->paystackService->initializeEscrowPayment($deal, $callbackUrl);
+        $checkoutData = $this->paystackService->initializeEscrowPayment(
+            $deal,
+            $callbackUrl,
+            $data['email'] ?? $deal->buyer_email,
+        );
 
         return response()->json([
             'message'  => 'Paystack escrow checkout initialized.',
