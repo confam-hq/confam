@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\DealResource;
+use App\Models\Deal;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,19 @@ class AuthController extends Controller
     {
         $deals = $request->user()
             ->deals()
+            ->with(['proofArtifact', 'waybillManifest', 'ledgers'])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'deals' => DealResource::collection($deals),
+        ]);
+    }
+
+    public function myPurchases(Request $request): JsonResponse
+    {
+        $deals = Deal::query()
+            ->where('buyer_email', $request->user()->email)
             ->with(['proofArtifact', 'waybillManifest', 'ledgers'])
             ->latest()
             ->get();

@@ -25,11 +25,12 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/vendor/me', [AuthController::class, 'me']);
         Route::get('/vendor/deals', [AuthController::class, 'myDeals']);
+        Route::get('/buyer/deals', [AuthController::class, 'myPurchases']);
+        Route::post('/deals', [DealController::class, 'store']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
     });
 
     // 1. Deal Creation & Public Deal Room
-    Route::post('/deals', [DealController::class, 'store']);
     Route::get('/deals/{short_code}', [DealController::class, 'show']);
 
     // 2. Paystack Checkout, Callback Verification & HMAC Webhook
