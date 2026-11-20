@@ -5,6 +5,21 @@ import { errMsg } from "../../api/client";
 import { formatNaira } from "../../utils/formatNaira";
 import type { Deal } from "../../types/deal.types";
 
+type PaystackSetup = {
+  key: string;
+  email: string;
+  amount: number;
+  ref: string;
+  onSuccess: (transaction: { reference: string }) => void;
+  onCancel: () => void;
+};
+
+type PaystackWindow = Window & {
+  PaystackPop?: {
+    setup: (options: PaystackSetup) => { openIframe: () => void };
+  };
+};
+
 export default function PaystackModal({
   deal,
   onClose,
@@ -37,19 +52,14 @@ export default function PaystackModal({
     try {
       const callbackUrl = new URL(`/deal/${encodeURIComponent(deal.code)}`, window.location.origin).toString();
       const init = await dealApi.initPayment(deal.code, email, callbackUrl);
-      if (!init.checkout.authorization_url) throw new Error("Paystack did not return a checkout URL.");
-
-      if (init.checkout.mock_mode) {
-        window.location.assign(init.checkout.authorization_url);
-        return;
+      if (init.checkout.mock_mode) throw new Error("Paystack is not configured for payments in this environment.");
+      if (!init.checkout.public_key || !init.checkout.reference) {
+        throw new Error("Paystack did not return the credentials needed for inline checkout.");
       }
 
       await loadPaystackInline();
-      const PaystackPop = (window as any).PaystackPop;
-      if (!PaystackPop || !init.checkout.public_key) {
-        window.location.assign(init.checkout.authorization_url);
-        return;
-      }
+      const PaystackPop = (window as PaystackWindow).PaystackPop;
+      if (!PaystackPop) throw new Error("Inline Paystack checkout could not be opened. Please try again.");
 
       const handler = PaystackPop.setup({
         key: init.checkout.public_key,

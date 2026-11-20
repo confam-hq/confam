@@ -2,8 +2,18 @@ import axios from "axios";
 
 export const TOKEN_KEY = "confam_token";
 
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+const normalizedBaseUrl = configuredBaseUrl?.replace(/\/+$/, "");
+const apiBaseUrl = normalizedBaseUrl
+  ? /\/api\/v1$/i.test(normalizedBaseUrl)
+    ? normalizedBaseUrl
+    : /\/api$/i.test(normalizedBaseUrl)
+      ? `${normalizedBaseUrl}/v1`
+      : `${normalizedBaseUrl}/api/v1`
+  : "/api/v1";
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL,
+  baseURL: apiBaseUrl,
   headers: { Accept: "application/json" },
 });
 

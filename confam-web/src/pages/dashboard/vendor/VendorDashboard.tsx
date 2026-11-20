@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { KeyRound, Plus, Truck, Wallet } from "lucide-react";
 import { dealApi } from "../../../api/dealApi";
+import { errMsg } from "../../../api/client";
 import MetricCard from "../../../components/escrow/MetricCard";
 import DealTable from "../../../components/escrow/DealTable";
 import DealInspector from "../../../components/escrow/DealInspector";
@@ -12,21 +13,35 @@ export default function VendorDashboard() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [sel, setSel] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [modal, setModal] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let active = true;
     dealApi
       .list()
       .then((d) => {
+        if (!active) return;
         setDeals(d);
         setSel(d[0] ?? null);
-      })
-      .catch(() => {
+      }).catch((e) => {
+        if (!active) return;
         setDeals([]);
         setSel(null);
+        setLoadError(errMsg(e, "Could not load your deals."));
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [reloadKey]);
+
+  const retryLoadDeals = () => {
+    setLoading(true);
+    setLoadError("");
+    setReloadKey((key) => key + 1);
+  };
 
   const m = useMemo(() => ({
     escrow: deals.filter((d) => d.status === "escrow_locked" || d.status === "in_transit").reduce((s, d) => s + Number(d.amount), 0),
@@ -54,6 +69,12 @@ export default function VendorDashboard() {
 
       {loading ? (
         <div className="card p-10 text-center text-sm text-muted">Loading…</div>
+      ) : loadError ? (
+        <div role="alert" className="card p-6 text-center">
+          <p className="text-sm font-medium">Your deals could not be loaded.</p>
+          <p className="mt-2 text-sm text-muted">{loadError}</p>
+          <button onClick={retryLoadDeals} className="btn-ghost mt-4">Try again</button>
+        </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
           <DealTable deals={deals} selected={sel?.code} onSelect={setSel} />

@@ -105,7 +105,7 @@ export const authApi = {
     api.post<{ token: string; user: User }>("/auth/login", { email, password }).then((r) => r.data),
   register: (payload: Record<string, any>) =>
     api.post<{ token: string; user: User }>("/auth/register", payload).then((r) => r.data),
-  me: () => api.get<{ user: User }>("/auth/me").then((r) => r.data.user),
+  me: () => api.get<{ user: User }>("/vendor/me").then((r) => r.data.user),
      banks: () =>
     api.get<any>("/banks").then((r) => {
       const raw: any[] = Array.isArray(r.data) ? r.data : r.data?.data ?? r.data?.banks ?? [];
@@ -140,7 +140,6 @@ export const dealApi = {
       .post<{
         message: string;
         checkout: {
-          authorization_url: string;
           reference?: string;
           public_key?: string;
           mock_mode?: boolean;
