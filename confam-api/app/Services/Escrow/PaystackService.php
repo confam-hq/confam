@@ -10,11 +10,13 @@ use RuntimeException;
 class PaystackService
 {
     private string $secretKey;
+    private string $publicKey;
     private string $baseUrl;
 
     public function __construct()
     {
         $this->secretKey = (string) config('services.paystack.secret_key');
+        $this->publicKey = (string) config('services.paystack.public_key');
         $this->baseUrl   = rtrim((string) config('services.paystack.base_url', 'https://api.paystack.co'), '/');
     }
 
@@ -62,6 +64,7 @@ class PaystackService
                 'authorization_url' => "{$callbackUrl}?reference={$reference}&mock_paid=1",
                 'reference'         => $reference,
                 'mock_mode'         => true,
+                'public_key'        => $this->publicKey,
             ];
         }
 
@@ -83,7 +86,10 @@ class PaystackService
             throw new RuntimeException('Paystack initialization failed: ' . ($response->json('message') ?? 'Unknown error'));
         }
 
-        return $response->json('data');
+        return array_merge(
+            (array) $response->json('data'),
+            ['public_key' => $this->publicKey]
+        );
     }
 
     public function verifyTransaction(string $reference): array

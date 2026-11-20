@@ -2,20 +2,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --canvas: #f8fafc;
-  --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --line: #e2e8f0;
-  --ink: #09090b;
-  --muted: #64748b;
+  --canvas: #f4efe8;
+  --surface: #fbf8f3;
+  --surface-2: #ebe3d8;
+  --line: #ddd2c3;
+  --ink: #211c18;
+  --muted: #786d62;
 }
 .dark {
-  --canvas: #09090b;
-  --surface: #121215;
-  --surface-2: #18181b;
-  --line: #27272a;
-  --ink: #fafafa;
-  --muted: #a1a1aa;
+  --canvas: #171615;
+  --surface: #22201e;
+  --surface-2: #2a2724;
+  --line: #37322e;
+  --ink: #f5f1ea;
+  --muted: #b7ada2;
 }
 
 @theme inline {
@@ -72,19 +72,23 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 }
 
 @layer components {
-  .card { @apply rounded-xl border border-line bg-surface; }
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+    box-shadow: 0 12px 32px rgba(72, 55, 38, 0.06);
+  }
+  .dark .card { box-shadow: 0 16px 38px rgba(0, 0, 0, 0.18); }
   .input {
-    @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink
+    @apply w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink
       placeholder:text-muted outline-none transition focus:border-brand focus:ring-1 focus:ring-brand;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm
-      font-semibold text-white shadow-sm shadow-emerald-500/20 transition hover:bg-brand-600
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm
+      font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5 hover:bg-brand-600
       active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line px-4 py-2
-      text-sm font-semibold text-ink transition hover:bg-surface-2 active:scale-[0.98]
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line px-5 py-3
+      text-sm font-bold text-ink transition hover:-translate-y-0.5 hover:bg-surface-2 active:scale-[0.98]
       disabled:pointer-events-none disabled:opacity-50;
   }
   .label { @apply mb-1.5 block text-xs font-medium text-muted; }

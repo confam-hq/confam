@@ -133,7 +133,12 @@ export const dealApi = {
     api
       .post<{
         message: string;
-        checkout: { authorization_url: string; reference?: string };
+        checkout: {
+          authorization_url: string;
+          reference?: string;
+          public_key?: string;
+          mock_mode?: boolean;
+        };
       }>(`/deals/${code}/pay`, { email, callback_url: callbackUrl })
       .then((r) => r.data),
   verifyPayment: (code: string, reference: string) =>
