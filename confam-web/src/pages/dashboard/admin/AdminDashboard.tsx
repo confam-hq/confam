@@ -5,6 +5,7 @@ import { errMsg } from "../../../api/client";
 import MetricCard from "../../../components/escrow/MetricCard";
 import DealTable from "../../../components/escrow/DealTable";
 import DealInspector from "../../../components/escrow/DealInspector";
+import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import { formatNaira } from "../../../utils/formatNaira";
 import type { Deal } from "../../../types/deal.types";
 
@@ -12,6 +13,7 @@ export default function AdminDashboard() {
   const [disputes, setDisputes] = useState<Deal[]>([]);
   const [sel, setSel] = useState<Deal | null>(null);
   const [rev, setRev] = useState({ total: 0, fees: 0, settled: 0 });
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -19,7 +21,9 @@ export default function AdminDashboard() {
     adminApi.disputes().then((d) => { setDisputes(d); setSel((s) => d.find((x) => x.code === s?.code) ?? d[0] ?? null); });
 
   useEffect(() => {
-    load().catch((error) => setErr(errMsg(error, "Could not load disputes.")));
+    load()
+      .catch((error) => setErr(errMsg(error, "Could not load disputes.")))
+      .finally(() => setLoading(false));
     adminApi.revenue().then(setRev).catch((error) => setErr(errMsg(error, "Could not load revenue.")));
   }, []);
 
@@ -45,22 +49,26 @@ export default function AdminDashboard() {
 
       {err && <p role="alert" className="mb-4 text-sm text-red-500">{err}</p>}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-        <DealTable deals={disputes} selected={sel?.code} onSelect={setSel} />
-        <div className="space-y-3">
-          <DealInspector deal={sel} />
-          {sel && (
-            <div className="neo-card space-y-3 rounded-2xl p-4">
-              <p className="text-sm font-semibold">Resolve this case</p>
-              <p className="text-xs text-muted">Review the dispute reason and available packing/waybill evidence before deciding.</p>
-              <button disabled={busy} onClick={() => resolve("release")} className="btn-primary min-h-12 w-full">
-                {busy ? "Updating…" : "Release to vendor"}
-              </button>
-              <button disabled={busy} onClick={() => resolve("refund")} className="btn-ghost min-h-12 w-full">Refund buyer</button>
-            </div>
-          )}
+      {loading ? (
+        <LoadingScreen compact label="Loading the dispute queue" />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+          <DealTable deals={disputes} selected={sel?.code} onSelect={setSel} />
+          <div className="space-y-3">
+            <DealInspector deal={sel} />
+            {sel && (
+              <div className="neo-card space-y-3 rounded-2xl p-4">
+                <p className="text-sm font-semibold">Resolve this case</p>
+                <p className="text-xs text-muted">Review the dispute reason and available packing/waybill evidence before deciding.</p>
+                <button disabled={busy} onClick={() => resolve("release")} className="btn-primary min-h-12 w-full">
+                  {busy ? "Updating…" : "Release to vendor"}
+                </button>
+                <button disabled={busy} onClick={() => resolve("refund")} className="btn-ghost min-h-12 w-full">Refund buyer</button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

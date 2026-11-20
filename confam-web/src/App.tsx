@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import DashboardShell from "./components/layout/DashboardShell";
@@ -13,6 +13,8 @@ import VendorDashboard from "./pages/dashboard/vendor/VendorDashboard";
 import BuyerDashboard from "./pages/dashboard/buyers/BuyerDashboard";
 import AdminDashboard from "./pages/dashboard/admin/AdminDashboard";
 import LegalPage from "./pages/LegalPage";
+import StatusPage from "./pages/StatusPage";
+import AppErrorBoundary from "./components/feedback/AppErrorBoundary";
 
 function MarketingShell() {
   return (
@@ -28,36 +30,39 @@ function MarketingShell() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<MarketingShell />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/deal/:code" element={<DealRoomPage />} />
-        <Route path="/ping/:token" element={<DriverPingPage />} />
-        <Route path="/terms" element={<LegalPage page="terms" />} />
-        <Route path="/privacy" element={<LegalPage page="privacy" />} />
-        <Route path="/cookies" element={<LegalPage page="cookies" />} />
-      </Route>
+    <AppErrorBoundary>
+      <Routes>
+        <Route element={<MarketingShell />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/deal/:code" element={<DealRoomPage />} />
+          <Route path="/ping/:token" element={<DriverPingPage />} />
+          <Route path="/terms" element={<LegalPage page="terms" />} />
+          <Route path="/privacy" element={<LegalPage page="privacy" />} />
+          <Route path="/cookies" element={<LegalPage page="cookies" />} />
+        </Route>
 
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/403" element={<StatusPage code="403" />} />
 
-      <Route element={<ProtectedRoute roles={["vendor"]} />}>
-        <Route element={<DashboardShell />}>
-          <Route path="/dashboard/vendor" element={<VendorDashboard />} />
-          <Route path="/deals/new" element={<CreateDealPage />} />
+        <Route element={<ProtectedRoute roles={["vendor"]} />}>
+          <Route element={<DashboardShell />}>
+            <Route path="/dashboard/vendor" element={<VendorDashboard />} />
+            <Route path="/deals/new" element={<CreateDealPage />} />
+          </Route>
         </Route>
-      </Route>
-      <Route element={<ProtectedRoute roles={["buyer"]} />}>
-        <Route element={<DashboardShell />}>
-          <Route path="/dashboard/buyer" element={<BuyerDashboard />} />
+        <Route element={<ProtectedRoute roles={["buyer"]} />}>
+          <Route element={<DashboardShell />}>
+            <Route path="/dashboard/buyer" element={<BuyerDashboard />} />
+          </Route>
         </Route>
-      </Route>
-      <Route element={<ProtectedRoute roles={["admin"]} />}>
-        <Route element={<DashboardShell />}>
-          <Route path="/dashboard/admin" element={<AdminDashboard />} />
+        <Route element={<ProtectedRoute roles={["admin"]} />}>
+          <Route element={<DashboardShell />}>
+            <Route path="/dashboard/admin" element={<AdminDashboard />} />
+          </Route>
         </Route>
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<StatusPage code="404" />} />
+      </Routes>
+    </AppErrorBoundary>
   );
 }

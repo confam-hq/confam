@@ -5,6 +5,7 @@ import { errMsg } from "../../../api/client";
 import MetricCard from "../../../components/escrow/MetricCard";
 import DealTable from "../../../components/escrow/DealTable";
 import DealInspector from "../../../components/escrow/DealInspector";
+import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import CreateDealModal from "./CreateDealModal";
 import { formatNaira } from "../../../utils/formatNaira";
 import type { Deal } from "../../../types/deal.types";
@@ -80,7 +81,7 @@ export default function VendorDashboard() {
       </div>
 
       {loading ? (
-        <div className="card p-10 text-center text-sm text-muted">Loading…</div>
+        <LoadingScreen compact label="Loading your deals" />
       ) : loadError ? (
         <div role="alert" className="card p-6 text-center">
           <p className="text-sm font-medium">Your deals could not be loaded.</p>

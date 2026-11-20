@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, Lock } from "lucide-react";
+import { isAxiosError } from "axios";
 import { dealApi } from "../api/dealApi";
 import { errMsg } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +10,8 @@ import LedgerTimeline from "../components/escrow/LedgerTimeline";
 import LiveProofRecorder from "../components/camera/LiveProofRecorder";
 import WaybillScannerCard from "../components/waybill/WaybillScannerCard";
 import PaystackModal from "../components/payment/PaystackModal";
+import LoadingScreen from "../components/feedback/LoadingScreen";
+import StatusPage from "./StatusPage";
 import { formatNaira } from "../utils/formatNaira";
 import type { Deal } from "../types/deal.types";
 
@@ -20,6 +23,7 @@ export default function DealRoomPage() {
   const verifiedPaymentReference = useRef<string | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [err, setErr] = useState("");
+  const [loadErrorCode, setLoadErrorCode] = useState<"404" | "500">("500");
   const [pay, setPay] = useState(false);
   const [blob, setBlob] = useState<{ b: Blob; hash: string } | null>(null);
   const [progress, setProgress] = useState(0);
@@ -29,7 +33,15 @@ export default function DealRoomPage() {
   const [actionMessage, setActionMessage] = useState("");
 
   const load = useCallback(
-    () => dealApi.get(code).then(setDeal).catch((e) => setErr(errMsg(e, "Deal not found"))),
+    () => dealApi.get(code)
+      .then((loadedDeal) => {
+        setDeal(loadedDeal);
+        setErr("");
+      })
+      .catch((e) => {
+        setLoadErrorCode(isAxiosError(e) && e.response?.status === 404 ? "404" : "500");
+        setErr(errMsg(e, "Could not load this deal."));
+      }),
     [code]
   );
   useEffect(() => { load(); }, [load]);
@@ -58,8 +70,8 @@ export default function DealRoomPage() {
       });
   }, [code, load, location.pathname, location.search, navigate]);
 
-  if (err && !deal) return <div role="alert" className="grid min-h-[50vh] place-items-center text-sm text-muted">{err}</div>;
-  if (!deal) return <div className="grid min-h-[50vh] place-items-center text-sm text-muted">Loading deal…</div>;
+  if (err && !deal) return <StatusPage code={loadErrorCode} detail={err} />;
+  if (!deal) return <LoadingScreen label="Opening your protected deal" />;
 
   const isVendor = user?.role === "vendor";
   const isBuyer = user?.role === "buyer"

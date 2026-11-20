@@ -1,13 +1,13 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuth, homeFor } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
+import LoadingScreen from "../feedback/LoadingScreen";
 import type { Role } from "../../types/deal.types";
 
 export default function ProtectedRoute({ roles }: { roles?: Role[] }) {
   const { user, loading } = useAuth();
   const loc = useLocation();
-  if (loading)
-    return <div className="grid min-h-[50vh] place-items-center text-sm text-muted">Loading…</div>;
+  if (loading) return <LoadingScreen label="Checking your secure session" />;
   if (!user) return <Navigate to="/login" state={{ from: loc.pathname }} replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to={homeFor(user.role)} replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/403" replace />;
   return <Outlet />;
 }

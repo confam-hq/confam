@@ -5,6 +5,7 @@ import { errMsg } from "../../../api/client";
 import MetricCard from "../../../components/escrow/MetricCard";
 import DealTable from "../../../components/escrow/DealTable";
 import DealInspector from "../../../components/escrow/DealInspector";
+import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import { formatNaira } from "../../../utils/formatNaira";
 import type { Deal } from "../../../types/deal.types";
 
@@ -165,7 +166,7 @@ export default function BuyerDashboard() {
       {actionError && <p role="alert" className="text-sm text-red-500">{actionError}</p>}
 
       {loading ? (
-        <div className="neo-card rounded-2xl p-8 text-center text-sm text-muted">Loading purchases…</div>
+        <LoadingScreen compact label="Loading your purchases" />
       ) : loadError ? (
         <div className="neo-card rounded-2xl p-6 text-center" role="alert">
           <p className="font-medium">Purchases could not be loaded.</p>

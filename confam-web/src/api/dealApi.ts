@@ -57,7 +57,7 @@ export interface WaybillOcrResult {
 }
 
 export interface DispatchPayload {
-  receipt_image: File;
+  receipt_image?: File | null;
   transport_company: string;
   waybill_number: string;
   driver_phone: string;
@@ -232,7 +232,7 @@ export const dealApi = {
 
   dispatch: (code: string, payload: DispatchPayload) => {
     const fd = new FormData();
-    fd.append("receipt_image", payload.receipt_image);
+    if (payload.receipt_image) fd.append("receipt_image", payload.receipt_image);
     fd.append("transport_company", payload.transport_company);
     fd.append("waybill_number", payload.waybill_number ?? "");
     fd.append("driver_phone", payload.driver_phone);

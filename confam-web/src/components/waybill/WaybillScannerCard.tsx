@@ -15,13 +15,13 @@ type WaybillFields = {
 };
 type WaybillFieldKey = keyof Omit<WaybillFields, "ai_summary_note">;
 
-const fieldLabels: { key: WaybillFieldKey; label: string; required?: boolean }[] = [
-  { key: "transport_company", label: "Transport company", required: true },
-  { key: "waybill_number", label: "Waybill number" },
-  { key: "driver_phone", label: "Driver phone", required: true },
-  { key: "vehicle_plate", label: "Vehicle plate" },
-  { key: "origin_park", label: "Origin park" },
-  { key: "destination_park", label: "Destination park", required: true },
+const fieldLabels: { key: WaybillFieldKey; label: string; required?: boolean; maxLength: number }[] = [
+  { key: "transport_company", label: "Transport company", required: true, maxLength: 120 },
+  { key: "waybill_number", label: "Waybill number", maxLength: 80 },
+  { key: "driver_phone", label: "Driver phone", required: true, maxLength: 25 },
+  { key: "vehicle_plate", label: "Vehicle plate", maxLength: 30 },
+  { key: "origin_park", label: "Origin park", maxLength: 120 },
+  { key: "destination_park", label: "Destination park", required: true, maxLength: 120 },
 ];
 
 export default function WaybillScannerCard({ code, onDone }: { code: string; onDone: (d: Deal) => void }) {
@@ -30,6 +30,7 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
   const [dispatching, setDispatching] = useState(false);
   const [err, setErr] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [fields, setFields] = useState<WaybillFields>({
     transport_company: "",
     waybill_number: "",
@@ -45,7 +46,8 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
     if (!f) return;
     setScanning(true);
     setErr("");
-    setReceipt(null);
+    setReceipt(f);
+    setFormOpen(true);
     setValidReceipt(null);
     setFields({
       transport_company: "",
@@ -72,6 +74,11 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
       setValidReceipt(result.is_valid_receipt ?? false);
     } catch (e) {
       setErr(errMsg(e, "Could not read waybill"));
+      setValidReceipt(false);
+      setFields((current) => ({
+        ...current,
+        ai_summary_note: "OCR is unavailable. Enter the waybill details manually.",
+      }));
     } finally {
       setScanning(false);
     }
@@ -79,11 +86,22 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
 
   const dispatch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!receipt) return;
+    const requiredFields = ["transport_company", "driver_phone", "destination_park"] as const;
+    if (requiredFields.some((key) => !fields[key].trim())) {
+      setErr("Add the transport company, driver phone, and destination before dispatching.");
+      return;
+    }
+
     setDispatching(true);
     setErr("");
     try {
-      onDone(await dealApi.dispatch(code, { ...fields, receipt_image: receipt }));
+      onDone(await dealApi.dispatch(code, {
+        ...fields,
+        transport_company: fields.transport_company.trim(),
+        driver_phone: fields.driver_phone.trim(),
+        destination_park: fields.destination_park.trim(),
+        receipt_image: receipt,
+      }));
     } catch (e) {
       setErr(errMsg(e, "Could not save waybill and dispatch deal."));
     } finally {
@@ -105,18 +123,38 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
       <button type="button" onClick={() => input.current?.click()} disabled={scanning || dispatching} className="btn-ghost min-h-12 w-full">
         {scanning ? "Scanning receipt…" : receipt ? "Scan a different receipt" : "Take or upload receipt photo"}
       </button>
-      {receipt && (
+      {!formOpen && (
+        <button
+          type="button"
+          onClick={() => {
+            setErr("");
+            setValidReceipt(false);
+            setFields((current) => ({
+              ...current,
+              ai_summary_note: "Manual entry. Check each waybill field before dispatch.",
+            }));
+            setFormOpen(true);
+          }}
+          disabled={dispatching}
+          className="btn-ghost min-h-12 w-full"
+        >
+          Enter waybill details manually
+        </button>
+      )}
+      {formOpen && (
         <form onSubmit={dispatch} className="space-y-3">
+          <fieldset disabled={scanning || dispatching} className="space-y-3">
           {validReceipt === false && (
             <p role="status" className="rounded-xl bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
-              AI could not verify this receipt. Enter the waybill details manually and check them carefully.
+              {receipt ? "AI could not verify this receipt. Review and edit the details manually." : "No receipt image attached. Enter the waybill details manually."}
             </p>
           )}
-          {fieldLabels.map(({ key, label, required }) => (
+          {fieldLabels.map(({ key, label, required, maxLength }) => (
             <label key={key} className="block">
               <span className="label">{label}{required ? " *" : ""}</span>
               <input
                 required={required}
+                maxLength={maxLength}
                 className="input"
                 value={fields[key] ?? ""}
                 onChange={(event) => updateField(key, event.target.value)}
@@ -124,8 +162,9 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
             </label>
           ))}
           <p className="text-xs text-muted">{fields.ai_summary_note}</p>
+          </fieldset>
           <button type="submit" disabled={dispatching || scanning} className="btn-primary min-h-14 w-full rounded-2xl text-base">
-            {dispatching ? "Saving waybill…" : "Confirm details and dispatch"}
+            {dispatching ? "Saving waybill…" : "Save details and dispatch"}
           </button>
         </form>
       )}
