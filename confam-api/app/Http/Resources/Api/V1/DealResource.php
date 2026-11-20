@@ -97,7 +97,7 @@ class DealResource extends JsonResource
                     'origin_park'         => $this->waybillManifest->origin_park,
                     'destination_park'    => $this->waybillManifest->destination_park,
                     'ai_ocr_summary'      => $this->waybillManifest->ai_ocr_summary,
-                    'driver_ping_url'     => "{$frontendUrl}/d/{$this->waybillManifest->driver_ping_token}",
+                    'driver_ping_url'     => "{$frontendUrl}/ping/{$this->waybillManifest->driver_ping_token}",
                     'last_known_lat'      => $this->waybillManifest->last_known_lat,
                     'last_known_lng'      => $this->waybillManifest->last_known_lng,
                     'last_location_label' => $this->waybillManifest->last_location_label,

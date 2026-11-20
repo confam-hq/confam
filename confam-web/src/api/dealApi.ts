@@ -1,5 +1,5 @@
 import { api, resolveMediaUrl } from "./client";
-import type { Bank, CreateDealPayload, Deal, User, Waybill } from "../types/deal.types";
+import type { Bank, CreateDealPayload, Deal, User } from "../types/deal.types";
 
 type ApiDealStatus =
   | "AWAITING_PAYMENT"
@@ -267,7 +267,12 @@ export const dealApi = {
 
 export const driverApi = {
   ping: (token: string, lat: number, lng: number) =>
-    api.post<{ waybill: Waybill }>(`/ping/${token}`, { lat, lng }).then((r) => r.data),
+    api
+      .post<{ message: string; last_pinged_at: string }>(
+        `/driver/${encodeURIComponent(token)}/ping`,
+        { lat, lng },
+      )
+      .then((r) => r.data),
 };
 
 export const adminApi = {
