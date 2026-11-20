@@ -11,7 +11,7 @@ export default function BuyerDashboard() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [sel, setSel] = useState<Deal | null>(null);
 
-  useEffect(() => { dealApi.list().then((d) => { setDeals(d); setSel(d[0] ?? null); }); }, []);
+  useEffect(() => { dealApi.list("buyer").then((d) => { setDeals(d); setSel(d[0] ?? null); }); }, []);
 
   const m = useMemo(() => ({
     held: deals.filter((d) => ["escrow_locked", "in_transit"].includes(d.status)).reduce((s, d) => s + Number(d.amount), 0),

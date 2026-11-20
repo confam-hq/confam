@@ -124,7 +124,13 @@ export const authApi = {
 };
 
 export const dealApi = {
-  list: () => api.get<{ data: Deal[] }>("/deals").then((r) => r.data.data),
+  list: (role: "vendor" | "buyer" = "vendor") =>
+    api
+      .get<{ deals: ApiDealResponse["deal"][] | { data: ApiDealResponse["deal"][] } }>(`/${role}/deals`)
+      .then((r) => {
+        const deals = Array.isArray(r.data.deals) ? r.data.deals : r.data.deals?.data ?? [];
+        return deals.map(mapApiDeal);
+      }),
   get: (code: string) => api.get<ApiDealResponse>(`/deals/${code}`).then((r) => mapApiDeal(r.data.deal)),
   create: (payload: CreateDealPayload) =>
     api.post<ApiDealResponse>("/deals", payload).then(({ data }) => mapApiDeal(data.deal)),

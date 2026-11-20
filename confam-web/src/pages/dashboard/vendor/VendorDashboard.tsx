@@ -15,7 +15,17 @@ export default function VendorDashboard() {
   const [modal, setModal] = useState(false);
 
   useEffect(() => {
-    dealApi.list().then((d) => { setDeals(d); setSel(d[0] ?? null); }).finally(() => setLoading(false));
+    dealApi
+      .list()
+      .then((d) => {
+        setDeals(d);
+        setSel(d[0] ?? null);
+      })
+      .catch(() => {
+        setDeals([]);
+        setSel(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const m = useMemo(() => ({
