@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, resolveMediaUrl } from "./client";
 import type { Bank, CreateDealPayload, Deal, User, Waybill } from "../types/deal.types";
 
 type ApiDealStatus =
@@ -67,6 +67,14 @@ export interface DispatchPayload {
   ai_summary_note: string;
 }
 
+export interface VendorProfilePayload {
+  name: string;
+  phone: string;
+  bank_code: string;
+  bank_name: string;
+  account_number: string;
+}
+
 const dealStatus: Record<ApiDealStatus, Deal["status"]> = {
   AWAITING_PAYMENT: "pending",
   FUNDED_LOCKED: "escrow_locked",
@@ -96,7 +104,7 @@ const mapApiDeal = (deal: ApiDealResponse["deal"]): Deal => {
     buyer_name: deal.buyer.name,
     buyer_phone: deal.buyer.phone_masked,
     buyer_email: deal.buyer.email,
-    proof_video_url: deal.proof_artifact?.video_url ?? null,
+    proof_video_url: resolveMediaUrl(deal.proof_artifact?.video_url),
     ai_match: deal.proof_artifact?.ai_confidence_score ?? null,
     sha256: deal.proof_artifact?.video_sha256_hash ?? null,
     waybill: manifest
@@ -138,6 +146,8 @@ export const authApi = {
   register: (payload: Record<string, unknown>) =>
     api.post<{ token: string; user: User }>("/auth/register", payload).then((r) => r.data),
   me: () => api.get<{ user: User }>("/vendor/me").then((r) => r.data.user),
+  updateProfile: (payload: VendorProfilePayload) =>
+    api.patch<{ user: User }>("/vendor/profile", payload).then((r) => r.data.user),
   banks: () =>
     api.get<unknown>("/banks").then((r) => {
       const payload = r.data;

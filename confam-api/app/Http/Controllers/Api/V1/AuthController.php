@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\DealResource;
 use App\Models\Deal;
 use App\Models\User;
+use App\Services\Escrow\PaystackService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class AuthController extends Controller
 {
@@ -65,6 +68,50 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return response()->json(['user' => $request->user()]);
+    }
+
+    public function updateProfile(Request $request, PaystackService $paystackService): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->role === 'vendor', 403);
+
+        $validated = $request->validate([
+            'name'           => ['required', 'string', 'max:120'],
+            'phone'          => ['required', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($user->id)],
+            'bank_code'      => ['required', 'string', 'max:15'],
+            'bank_name'      => ['required', 'string', 'max:100'],
+            'account_number' => ['required', 'string', 'digits:10'],
+        ]);
+
+        $payoutDetailsChanged = $user->bank_code !== $validated['bank_code']
+            || $user->account_number !== $validated['account_number'];
+        try {
+            $account = $paystackService->resolveAccount(
+                $validated['account_number'],
+                $validated['bank_code']
+            );
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+        $accountName = $account['account_name'] ?? null;
+
+        if (! is_string($accountName) || trim($accountName) === '') {
+            throw ValidationException::withMessages([
+                'account_number' => ['Could not verify the payout account.'],
+            ]);
+        }
+
+        $user->update([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'bank_code' => $validated['bank_code'],
+            'bank_name' => $validated['bank_name'],
+            'account_number' => $validated['account_number'],
+            'account_name' => $accountName,
+            'paystack_recipient_code' => $payoutDetailsChanged ? null : $user->paystack_recipient_code,
+        ]);
+
+        return response()->json(['user' => $user->fresh()]);
     }
 
     public function myDeals(Request $request): JsonResponse

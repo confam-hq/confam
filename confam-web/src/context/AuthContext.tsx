@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { ReactNode } from "react";
-import { authApi } from "../api/dealApi";
+import { authApi, type VendorProfilePayload } from "../api/dealApi";
 import { TOKEN_KEY } from "../api/client";
 import type { User, Role } from "../types/deal.types";
 
@@ -9,6 +9,7 @@ interface AuthCtx {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (payload: Record<string, any>) => Promise<User>;
+  updateProfile: (payload: VendorProfilePayload) => Promise<User>;
   logout: () => void;
 }
 const Ctx = createContext<AuthCtx>(null as any);
@@ -38,11 +39,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user;
   }, []);
 
+  const updateProfile = useCallback(async (payload: VendorProfilePayload) => {
+    const user = await authApi.updateProfile(payload);
+    setUser(user);
+    return user;
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   }, []);
 
-  return <Ctx.Provider value={{ user, loading, login, register, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, loading, login, register, updateProfile, logout }}>{children}</Ctx.Provider>;
 }
 export const useAuth = () => useContext(Ctx);

@@ -25,6 +25,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/vendor/me', [AuthController::class, 'me']);
+        Route::patch('/vendor/profile', [AuthController::class, 'updateProfile']);
         Route::get('/vendor/deals', [AuthController::class, 'myDeals']);
         Route::get('/buyer/deals', [AuthController::class, 'myPurchases']);
         Route::post('/deals', [DealController::class, 'store']);

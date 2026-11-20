@@ -12,6 +12,28 @@ const apiBaseUrl = normalizedBaseUrl
       : `${normalizedBaseUrl}/api/v1`
   : "/api/v1";
 
+const isLoopbackHost = (hostname: string) =>
+  hostname === "localhost" || hostname === "::1" || hostname === "[::1]" ||
+  hostname === "0.0.0.0" || /^127(?:\.\d{1,3}){3}$/.test(hostname);
+
+export const resolveMediaUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+
+  const apiOrigin = new URL(apiBaseUrl, window.location.origin);
+  const mediaUrl = new URL(url, apiOrigin.origin);
+  if (isLoopbackHost(mediaUrl.hostname)) {
+    if (isLoopbackHost(apiOrigin.hostname) && !isLoopbackHost(window.location.hostname)) {
+      throw new Error("Configure VITE_API_BASE_URL with the public API host to load deal media.");
+    }
+
+    mediaUrl.hostname = apiOrigin.hostname;
+    mediaUrl.port = apiOrigin.port;
+    mediaUrl.protocol = window.location.protocol === "https:" ? "https:" : apiOrigin.protocol;
+  }
+
+  return mediaUrl.toString();
+};
+
 export const api = axios.create({
   baseURL: apiBaseUrl,
   headers: { Accept: "application/json" },
@@ -34,5 +56,10 @@ api.interceptors.response.use(
   }
 );
 
-export const errMsg = (e: any, fallback = "Something went wrong") =>
-  e?.response?.data?.message || e?.message || fallback;
+export const errMsg = (error: unknown, fallback = "Something went wrong") => {
+  if (axios.isAxiosError<{ message?: unknown }>(error)) {
+    const message = error.response?.data?.message;
+    if (typeof message === "string" && message) return message;
+  }
+  return error instanceof Error && error.message ? error.message : fallback;
+};

@@ -10,6 +10,10 @@ import CreateDealPage from "./pages/CreateDealPage";
 import DealRoomPage from "./pages/DealRoomPage";
 import DriverPingPage from "./pages/DriverPingPage";
 import VendorDashboard from "./pages/dashboard/vendor/VendorDashboard";
+import VendorAnalyticsPage from "./pages/dashboard/vendor/VendorAnalyticsPage";
+import VendorDisputesPage from "./pages/dashboard/vendor/VendorDisputesPage";
+import VendorProfilePage from "./pages/dashboard/vendor/VendorProfilePage";
+import VendorSettingsPage from "./pages/dashboard/vendor/VendorSettingsPage";
 import BuyerDashboard from "./pages/dashboard/buyers/BuyerDashboard";
 import AdminDashboard from "./pages/dashboard/admin/AdminDashboard";
 import LegalPage from "./pages/LegalPage";
@@ -48,6 +52,10 @@ export default function App() {
         <Route element={<ProtectedRoute roles={["vendor"]} />}>
           <Route element={<DashboardShell />}>
             <Route path="/dashboard/vendor" element={<VendorDashboard />} />
+            <Route path="/dashboard/vendor/analytics" element={<VendorAnalyticsPage />} />
+            <Route path="/dashboard/vendor/disputes" element={<VendorDisputesPage />} />
+            <Route path="/dashboard/vendor/profile" element={<VendorProfilePage />} />
+            <Route path="/dashboard/vendor/settings" element={<VendorSettingsPage />} />
             <Route path="/deals/new" element={<CreateDealPage />} />
           </Route>
         </Route>

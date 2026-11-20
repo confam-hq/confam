@@ -1,4 +1,12 @@
-import { LayoutDashboard, LogOut, Plus } from "lucide-react";
+import {
+  ChartNoAxesColumnIncreasing,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  Settings2,
+  ShieldAlert,
+  UserRound,
+} from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth, homeFor } from "../../context/AuthContext";
 import ConfamLogo from "./ConfamLogo";
@@ -17,7 +25,15 @@ export default function DashboardShell() {
       label: user.role === "buyer" ? "Purchases" : user.role === "admin" ? "Disputes" : "Overview",
       icon: LayoutDashboard,
     },
-    ...(user.role === "vendor" ? [{ to: "/deals/new", label: "Create deal", icon: Plus }] : []),
+    ...(user.role === "vendor"
+      ? [
+          { to: "/dashboard/vendor/analytics", label: "Analytics", icon: ChartNoAxesColumnIncreasing },
+          { to: "/deals/new", label: "Create deal", icon: Plus },
+          { to: "/dashboard/vendor/disputes", label: "Submit dispute", icon: ShieldAlert },
+          { to: "/dashboard/vendor/profile", label: "Profile", icon: UserRound },
+          { to: "/dashboard/vendor/settings", label: "Settings", icon: Settings2 },
+        ]
+      : []),
   ];
 
   return (

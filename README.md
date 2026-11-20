@@ -18,6 +18,7 @@ The project has two parts:
 - Driver location pings through a shareable, no-install link.
 - OTP-based settlement and dispute freeze.
 - Buyer and vendor dashboards, with admin dispute resolution.
+- Vendor analytics, profile and payout-account editing, dashboard settings, and a dedicated dispute-submission page.
 - 5% vendor-deducted platform fee for new deals; existing deals retain their original fee terms.
 - Terms, Privacy, and Cookies pages (drafts pending entity/jurisdiction and legal review).
 
@@ -98,6 +99,8 @@ Set `VITE_PAYSTACK_PUBLIC_KEY` in `confam-web/.env.local` to configure the brows
 
 Without a configured Paystack secret key, the API uses a local mock checkout and mock settlement references. Without a Gemini API key, OCR and proof-audit endpoints return demo data. These fallbacks are for local development only and do not process real payments or verify real evidence. Configure valid service credentials before evaluating live flows.
 
+For production, set the Vercel `VITE_API_BASE_URL` (or `VITE_API_URL`) to the public HTTPS API URL. Set the API deployment's `APP_URL` to that API's public HTTPS origin and `FRONTEND_URL` to the Vercel app origin. Do not use `localhost` for either production host. Public proof media is served from the API's `/storage` path; the frontend also rewrites legacy localhost media URLs to the configured API host.
+
 ## Useful commands
 
 From `confam-web/`:
@@ -122,6 +125,7 @@ All API routes are prefixed with `/api/v1`.
 | `GET` | `/health` | API health check |
 | `POST` | `/auth/register`, `/auth/login` | Buyer or vendor account access |
 | `GET` | `/banks`, `POST /banks/resolve` | Bank list and account lookup |
+| `PATCH` | `/vendor/profile` | Update vendor contact and verified payout details |
 | `POST` | `/deals` | Create a deal |
 | `GET` | `/deals/{short_code}` | View a deal |
 | `POST` | `/deals/{short_code}/pay` | Initialize checkout |
