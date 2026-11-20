@@ -27,6 +27,7 @@ class DealResource extends JsonResource
                 'item_amount_naira'   => $this->item_amount_kobo / 100,
                 'waybill_fee_naira'   => $this->waybill_fee_kobo / 100,
                 'platform_fee_naira'  => $this->platform_fee_kobo / 100,
+                'platform_fee_payer'  => strtolower((string) $this->platform_fee_payer),
                 'total_payable_naira' => $this->total_payable_kobo / 100,
                 'item_amount_kobo'    => $this->item_amount_kobo,
                 'waybill_fee_kobo'    => $this->waybill_fee_kobo,

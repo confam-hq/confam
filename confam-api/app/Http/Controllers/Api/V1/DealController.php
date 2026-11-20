@@ -14,15 +14,17 @@ class DealController extends Controller
 {
     public function store(CreateDealRequest $request): JsonResponse
     {
+        abort_unless($request->user()->role === 'vendor', 403);
+
         $data = $request->validated();
 
         $itemAmountKobo = (int) round(((float) $data['item_amount_naira']) * 100);
         $waybillFeeKobo = (int) round(((float) ($data['waybill_fee_naira'] ?? 0)) * 100);
 
-        // 1.5% Platform Trust Fee (capped at NGN 5,000 = 500,000 kobo)
+        // The 5% platform fee is deducted from the vendor's payout, not added to the buyer's total.
         $subtotalKobo    = $itemAmountKobo + $waybillFeeKobo;
-        $platformFeeKobo = min(500000, (int) round($subtotalKobo * 0.015));
-        $totalPayableKobo = $subtotalKobo + $platformFeeKobo;
+        $platformFeeKobo = intdiv($subtotalKobo, 20) + (($subtotalKobo % 20) >= 10 ? 1 : 0);
+        $totalPayableKobo = $subtotalKobo;
 
         do {
             $shortCode = 'CF-' . strtoupper(Str::random(5));
@@ -49,6 +51,7 @@ class DealController extends Controller
             'item_amount_kobo'      => $itemAmountKobo,
             'waybill_fee_kobo'      => $waybillFeeKobo,
             'platform_fee_kobo'     => $platformFeeKobo,
+            'platform_fee_payer'    => 'VENDOR',
             'total_payable_kobo'    => $totalPayableKobo,
             'delivery_mode'         => $data['delivery_mode'],
             'status'                => EscrowStatus::AWAITING_PAYMENT,

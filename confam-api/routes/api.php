@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\BankVerifyController;
 use App\Http\Controllers\Api\V1\DealController;
 use App\Http\Controllers\Api\V1\PaystackController;
@@ -28,6 +29,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/buyer/deals', [AuthController::class, 'myPurchases']);
         Route::post('/deals', [DealController::class, 'store']);
         Route::post('/deals/{short_code}/proof', [ProofAndWaybillController::class, 'uploadProof']);
+        Route::post('/deals/{short_code}/parse-waybill', [ProofAndWaybillController::class, 'parseWaybill']);
+        Route::post('/deals/{short_code}/dispatch', [ProofAndWaybillController::class, 'dispatchDeal']);
+        Route::post('/deals/{short_code}/release', [SettlementController::class, 'releaseWithOtp']);
+        Route::post('/deals/{short_code}/confirm-delivery', [SettlementController::class, 'confirmDelivery']);
+        Route::post('/deals/{short_code}/dispute', [SettlementController::class, 'freezeDispute']);
+        Route::get('/admin/disputes', [AdminController::class, 'disputes']);
+        Route::get('/admin/revenue', [AdminController::class, 'revenue']);
+        Route::post('/admin/disputes/{short_code}/resolve', [AdminController::class, 'resolveDispute']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
     });
 
@@ -40,14 +49,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/webhooks/paystack', [PaystackController::class, 'webhook']);
 
     // 3. AI Waybill OCR & Live Proof-of-Pack Upload
-    Route::post('/deals/{short_code}/parse-waybill', [ProofAndWaybillController::class, 'parseWaybill']);
-    Route::post('/deals/{short_code}/dispatch', [ProofAndWaybillController::class, 'dispatchDeal']);
-
     // 4. Zero-Install 1-Tap Driver Location Ping
     Route::get('/driver/{ping_token}', [DriverPingController::class, 'show']);
     Route::post('/driver/{ping_token}/ping', [DriverPingController::class, 'storePing']);
 
-    // 5. 4-Digit OTP Settlement & Dispute Freeze
-    Route::post('/deals/{short_code}/release', [SettlementController::class, 'releaseWithOtp']);
-    Route::post('/deals/{short_code}/dispute', [SettlementController::class, 'freezeDispute']);
 });

@@ -1,6 +1,6 @@
 # Confam
 
-Confam is a social-commerce escrow and delivery-tracking app. Buyers can fund a deal, vendors can attach packing and waybill proof, and a buyer can release the funds with an OTP after delivery. A dispute can freeze the escrow for review.
+Confam is a social-commerce escrow and delivery-tracking app. Buyers can fund a deal, vendors can attach packing and waybill proof, and buyers can confirm delivery to release funds. A dispute freezes escrow for admin review; funds are not automatically released while a dispute is open.
 
 The project has two parts:
 
@@ -17,6 +17,9 @@ The project has two parts:
 - Waybill receipt OCR and vendor-entered dispatch details.
 - Driver location pings through a shareable, no-install link.
 - OTP-based settlement and dispute freeze.
+- Buyer and vendor dashboards, with admin dispute resolution.
+- 5% vendor-deducted platform fee for new deals; existing deals retain their original fee terms.
+- Terms, Privacy, and Cookies pages (drafts pending entity/jurisdiction and legal review).
 
 ## Requirements
 
@@ -46,6 +49,7 @@ if (-not (Test-Path database\database.sqlite)) {
     New-Item -ItemType File database\database.sqlite | Out-Null
 }
 php artisan migrate
+php artisan storage:link
 ```
 
 Start the API:
@@ -116,18 +120,26 @@ All API routes are prefixed with `/api/v1`.
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | API health check |
-| `POST` | `/auth/register`, `/auth/login` | Vendor account access |
+| `POST` | `/auth/register`, `/auth/login` | Buyer or vendor account access |
 | `GET` | `/banks`, `POST /banks/resolve` | Bank list and account lookup |
 | `POST` | `/deals` | Create a deal |
 | `GET` | `/deals/{short_code}` | View a deal |
 | `POST` | `/deals/{short_code}/pay` | Initialize checkout |
 | `POST` | `/deals/{short_code}/verify-payment` | Verify checkout callback |
 | `POST` | `/webhooks/paystack` | Receive Paystack webhook events |
+| `POST` | `/deals/{short_code}/proof` | Upload and audit packing video |
 | `POST` | `/deals/{short_code}/parse-waybill` | OCR a waybill receipt |
 | `POST` | `/deals/{short_code}/dispatch` | Submit packing proof and dispatch information |
 | `GET`, `POST` | `/driver/{ping_token}`, `/driver/{ping_token}/ping` | View a driver manifest and submit a location ping |
 | `POST` | `/deals/{short_code}/release` | Release escrow with an OTP |
-| `POST` | `/deals/{short_code}/dispute` | Freeze escrow for a dispute |
+| `POST` | `/deals/{short_code}/confirm-delivery` | Buyer confirms receipt and condition |
+| `POST` | `/deals/{short_code}/dispute` | Buyer or vendor freezes escrow for admin review |
+| `GET` | `/admin/disputes`, `/admin/revenue` | Admin dispute queue and fee totals |
+| `POST` | `/admin/deals/{short_code}/resolve` | Admin releases funds or submits a buyer refund |
+
+New deals charge buyers the item and delivery amounts only. At settlement, Confam deducts 5% of those proceeds from the vendor payout. Historical deals retain their previously displayed pricing. Neither buyer non-response nor a pending dispute triggers automatic payout.
+
+Admin registration is intentionally disabled. A trusted operator must assign the `admin` role to an account through a controlled administrative process before it can access the dispute queue or resolve cases.
 
 ## Project layout
 

@@ -26,7 +26,12 @@ class PaystackService
             ->timeout(10)
             ->get("{$this->baseUrl}/bank", ['country' => 'nigeria', 'perPage' => 100]);
 
-        return $response->successful() ? ($response->json('data') ?? []) : [];
+        $banks = $response->json('data');
+        if ($response->failed() || ! $response->json('status') || ! is_array($banks) || $banks === []) {
+            throw new RuntimeException('Could not load Nigerian banks: ' . ($response->json('message') ?? 'No banks were returned.'));
+        }
+
+        return $banks;
     }
 
     public function resolveAccount(string $accountNumber, string $bankCode): array
@@ -108,6 +113,34 @@ class PaystackService
         return $response->json('data');
     }
 
+    public function refundBuyer(Deal $deal): string
+    {
+        if (blank($this->secretKey) || str_starts_with($this->secretKey, 'sk_test_your')) {
+            return 'REF_CONFAM_' . strtoupper(Str::random(10));
+        }
+
+        if (! $deal->paystack_reference) {
+            throw new RuntimeException('Cannot refund a deal without a Paystack transaction reference.');
+        }
+
+        $response = Http::withToken($this->secretKey)
+            ->timeout(15)
+            ->post("{$this->baseUrl}/refund", [
+                'transaction' => $deal->paystack_reference,
+                'amount'      => $deal->total_payable_kobo,
+            ]);
+
+        if ($response->failed() || ! $response->json('status')) {
+            throw new RuntimeException('Paystack refund failed: ' . ($response->json('message') ?? 'Unknown error'));
+        }
+
+        return (string) (
+            data_get($response->json(), 'data.refund_reference')
+            ?? data_get($response->json(), 'data.transaction_reference')
+            ?? $deal->paystack_reference
+        );
+    }
+
     public function isValidWebhookSignature(string $rawPayload, ?string $signatureHeader): bool
     {
         if (! $signatureHeader || blank($this->secretKey)) {
@@ -130,7 +163,9 @@ class PaystackService
         $recipientCode = $deal->paystack_recipient_code;
 
         if (! $recipientCode) {
-            $recResp = Http::withToken($this->secretKey)->post("{$this->baseUrl}/transferrecipient", [
+            $recResp = Http::withToken($this->secretKey)
+                ->timeout(15)
+                ->post("{$this->baseUrl}/transferrecipient", [
                 'type'           => 'nuban',
                 'name'           => $deal->vendor_account_name,
                 'account_number' => $deal->vendor_account_number,
@@ -139,17 +174,27 @@ class PaystackService
             ]);
 
             $recipientCode = data_get($recResp->json(), 'data.recipient_code');
+            if ($recResp->failed() || ! $recResp->json('status') || ! $recipientCode) {
+                throw new RuntimeException('Paystack could not create the vendor payout recipient: ' . ($recResp->json('message') ?? 'Unknown error'));
+            }
             $deal->update(['paystack_recipient_code' => $recipientCode]);
         }
 
-        $transferResp = Http::withToken($this->secretKey)->post("{$this->baseUrl}/transfer", [
-            'source'    => 'balance',
-            'amount'    => $amountKobo,
-            'recipient' => $recipientCode,
-            'reason'    => $reason,
-            'reference' => 'PO_' . $deal->short_code . '_' . strtolower(Str::random(6)),
-        ]);
+        $transferResp = Http::withToken($this->secretKey)
+            ->timeout(15)
+            ->post("{$this->baseUrl}/transfer", [
+                'source'    => 'balance',
+                'amount'    => $amountKobo,
+                'recipient' => $recipientCode,
+                'reason'    => $reason,
+                'reference' => 'PO_' . $deal->short_code . '_' . strtolower(Str::random(6)),
+            ]);
 
-        return data_get($transferResp->json(), 'data.transfer_code', 'TRF_SETTLED_' . strtoupper(Str::random(8)));
+        $transferCode = data_get($transferResp->json(), 'data.transfer_code');
+        if ($transferResp->failed() || ! $transferResp->json('status') || ! $transferCode) {
+            throw new RuntimeException('Paystack vendor payout failed: ' . ($transferResp->json('message') ?? 'Unknown error'));
+        }
+
+        return (string) $transferCode;
     }
 }

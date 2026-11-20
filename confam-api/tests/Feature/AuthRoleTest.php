@@ -4,13 +4,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('new users receive a vendor role in registration and login responses', function () {
+test('vendor users receive the vendor role in registration and login responses', function () {
     $credentials = [
         'name' => 'Confam Vendor',
         'email' => 'vendor@example.com',
         'phone' => '08012345678',
         'password' => 'password123',
-        'role' => 'admin',
+        'role' => 'vendor',
     ];
 
     $this->postJson('/api/v1/auth/register', $credentials)
@@ -28,6 +28,28 @@ test('new users receive a vendor role in registration and login responses', func
     ])
         ->assertOk()
         ->assertJsonPath('user.role', 'vendor');
+});
+
+test('buyers can register as buyers but admin registration is rejected', function () {
+    $this->postJson('/api/v1/auth/register', [
+        'name' => 'Confam Buyer',
+        'email' => 'buyer@example.com',
+        'phone' => '08012345678',
+        'password' => 'password123',
+        'role' => 'buyer',
+    ])
+        ->assertCreated()
+        ->assertJsonPath('user.role', 'buyer');
+
+    $this->postJson('/api/v1/auth/register', [
+        'name' => 'Confam Admin',
+        'email' => 'admin@example.com',
+        'phone' => '08098765432',
+        'password' => 'password123',
+        'role' => 'admin',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('role');
 });
 
 test('vendor dashboard includes owned deals and legacy deals matching the vendor email', function () {

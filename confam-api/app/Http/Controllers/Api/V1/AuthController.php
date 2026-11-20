@@ -20,17 +20,19 @@ class AuthController extends Controller
             'email'          => ['required', 'email', 'unique:users,email'],
             'phone'          => ['required', 'string', 'max:20', 'unique:users,phone'],
             'password'       => ['required', 'string', 'min:6'],
+            'role'           => ['sometimes', 'in:buyer,vendor'],
             'bank_code'      => ['nullable', 'string', 'max:15'],
             'bank_name'      => ['nullable', 'string', 'max:100'],
             'account_number' => ['nullable', 'string', 'digits:10'],
             'account_name'   => ['nullable', 'string', 'max:120'],
         ]);
 
+        $validated['role'] = $validated['role'] ?? 'vendor';
         $user = User::create($validated);
         $token = $user->createToken('confam-spa-token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Vendor account confamed.',
+            'message' => 'Confam account created.',
             'token'   => $token,
             'user'    => $user,
         ], 201);
@@ -68,6 +70,7 @@ class AuthController extends Controller
     public function myDeals(Request $request): JsonResponse
     {
         $user = $request->user();
+        abort_unless($user->role === 'vendor', 403);
         $deals = Deal::query()
             ->where(function ($query) use ($user) {
                 $query->where('vendor_user_id', $user->id)
@@ -87,8 +90,11 @@ class AuthController extends Controller
 
     public function myPurchases(Request $request): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user->role === 'buyer', 403);
+
         $deals = Deal::query()
-            ->where('buyer_email', $request->user()->email)
+            ->whereRaw('LOWER(buyer_email) = ?', [strtolower($user->email)])
             ->with(['proofArtifact', 'waybillManifest', 'ledgers'])
             ->latest()
             ->get();

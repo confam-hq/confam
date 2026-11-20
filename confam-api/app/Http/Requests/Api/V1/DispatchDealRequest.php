@@ -15,9 +15,9 @@ class DispatchDealRequest extends FormRequest
     {
         return [
             'vendor_manage_token' => ['nullable', 'string'],
-            'proof_video'         => ['required', 'file', 'mimetypes:video/webm,video/mp4,video/quicktime', 'max:30720'], // max 30MB
+            'proof_video'         => ['nullable', 'file', 'mimetypes:video/webm,video/mp4,video/quicktime', 'max:30720'],
             'keyframe_image'      => ['nullable', 'image', 'max:5120'],
-            'client_sha256_hash'  => ['required', 'string', 'size:64'],
+            'client_sha256_hash'  => ['nullable', 'required_with:proof_video', 'string', 'size:64'],
             'recorded_lat'        => ['nullable', 'numeric'],
             'recorded_lng'        => ['nullable', 'numeric'],
 

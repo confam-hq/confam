@@ -32,6 +32,7 @@ class ProofAndWaybillController extends Controller
         ]);
 
         $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
+        $this->authorizeVendorOwnsDeal($request, $deal);
 
         $parsed = $this->waybillOcrService->parseReceipt(
             $request->file('receipt_image'),
@@ -47,13 +48,7 @@ class ProofAndWaybillController extends Controller
     public function uploadProof(Request $request, string $short_code): JsonResponse
     {
         $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
-        $user = $request->user();
-        $ownsDeal = (int) $deal->vendor_user_id === (int) $user->id
-            || ($deal->vendor_user_id === null
-                && $deal->vendor_email !== null
-                && strcasecmp($deal->vendor_email, $user->email) === 0);
-
-        abort_unless($user->role === 'vendor' && $ownsDeal, 403);
+        $this->authorizeVendorOwnsDeal($request, $deal);
 
         if ($deal->status !== EscrowStatus::FUNDED_LOCKED) {
             throw ValidationException::withMessages([
@@ -114,48 +109,59 @@ class ProofAndWaybillController extends Controller
     public function dispatchDeal(DispatchDealRequest $request, string $short_code): JsonResponse
     {
         $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
-        $data = $request->validated();
+        $this->authorizeVendorOwnsDeal($request, $deal);
 
-        $videoFile = $request->file('proof_video');
-        $serverSha256 = hash_file('sha256', $videoFile->getRealPath());
-
-        // Cryptographic tamper check: compare client WebRTC blob hash with uploaded file hash
-        if (strtolower($serverSha256) !== strtolower($data['client_sha256_hash'])) {
+        if ($deal->status !== EscrowStatus::FUNDED_LOCKED) {
             throw ValidationException::withMessages([
-                'proof_video' => ['Cryptographic SHA-256 mismatch detected! Video stream was modified after capture.'],
+                'status' => ['Only a funded deal can be dispatched.'],
             ]);
         }
 
-        $videoPath = $videoFile->store("proofs/{$deal->short_code}", 'public');
+        $data = $request->validated();
+        $videoFile = $request->file('proof_video');
+        if ($videoFile) {
+            $serverSha256 = hash_file('sha256', $videoFile->getRealPath());
+            if (! hash_equals(strtolower($data['client_sha256_hash']), strtolower($serverSha256))) {
+                throw ValidationException::withMessages([
+                    'proof_video' => ['Cryptographic SHA-256 mismatch detected! Video stream was modified after capture.'],
+                ]);
+            }
 
-        $keyframePath = null;
-        if ($request->hasFile('keyframe_image')) {
-            $keyframePath = $request->file('keyframe_image')->store("proofs/{$deal->short_code}", 'public');
+            $videoPath = $videoFile->store("proofs/{$deal->short_code}", 'public');
+            $keyframePath = $request->file('keyframe_image')
+                ? $request->file('keyframe_image')->store("proofs/{$deal->short_code}", 'public')
+                : null;
+            $aiAudit = $this->proofAuditService->auditPackingVideo(
+                $videoFile,
+                $request->file('keyframe_image'),
+                $deal->item_title,
+                $deal->item_description
+            );
+
+            ProofArtifact::updateOrCreate(
+                ['deal_id' => $deal->id],
+                [
+                    'video_path'          => $videoPath,
+                    'keyframe_image_path' => $keyframePath,
+                    'video_sha256_hash'   => $serverSha256,
+                    'recorded_lat'        => $data['recorded_lat'] ?? null,
+                    'recorded_lng'        => $data['recorded_lng'] ?? null,
+                    'ai_confidence_score' => $aiAudit['confidence_score'],
+                    'ai_item_matched'     => $aiAudit['item_matched'],
+                    'ai_audit_summary'    => $aiAudit['audit_summary'],
+                    'device_user_agent'   => substr((string) $request->userAgent(), 0, 250),
+                    'captured_at_utc'     => now()->utc(),
+                ]
+            );
+        } else {
+            $proofArtifact = $deal->proofArtifact;
+            if (! $proofArtifact) {
+                throw ValidationException::withMessages([
+                    'proof_video' => ['Upload and verify proof-of-pack before dispatching.'],
+                ]);
+            }
+            $serverSha256 = $proofArtifact->video_sha256_hash;
         }
-
-        // Run Gemini 3.8 Flash Multimodal Video + OCR Audit on the actual video stream
-        $aiAudit = $this->proofAuditService->auditPackingVideo(
-            $videoFile,
-            $request->file('keyframe_image'),
-            $deal->item_title,
-            $deal->item_description
-        );
-
-        ProofArtifact::updateOrCreate(
-            ['deal_id' => $deal->id],
-            [
-                'video_path'          => $videoPath,
-                'keyframe_image_path' => $keyframePath,
-                'video_sha256_hash'   => $serverSha256,
-                'recorded_lat'        => $data['recorded_lat'] ?? null,
-                'recorded_lng'        => $data['recorded_lng'] ?? null,
-                'ai_confidence_score' => $aiAudit['confidence_score'],
-                'ai_item_matched'     => $aiAudit['item_matched'],
-                'ai_audit_summary'    => $aiAudit['audit_summary'],
-                'device_user_agent'   => substr((string) $request->userAgent(), 0, 250),
-                'captured_at_utc'     => now()->utc(),
-            ]
-        );
 
         $receiptPath = null;
         if ($request->hasFile('receipt_image')) {
@@ -187,5 +193,18 @@ class ProofAndWaybillController extends Controller
             'message' => 'Proof-of-Pack verified and waybill manifest dispatched.',
             'deal'    => new DealResource($updatedDeal),
         ]);
+    }
+
+    private function authorizeVendorOwnsDeal(Request $request, Deal $deal): void
+    {
+        $user = $request->user();
+        $ownsDeal = $user && (
+            (int) $deal->vendor_user_id === (int) $user->id
+            || ($deal->vendor_user_id === null
+                && $deal->vendor_email !== null
+                && strcasecmp($deal->vendor_email, $user->email) === 0)
+        );
+
+        abort_unless($user && $user->role === 'vendor' && $ownsDeal, 403);
     }
 }

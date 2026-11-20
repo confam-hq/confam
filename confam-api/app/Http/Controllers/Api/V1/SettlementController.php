@@ -20,6 +20,7 @@ class SettlementController extends Controller
         ]);
 
         $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
+        $this->authorizeBuyer($request, $deal);
 
         $settledDeal = $this->stateMachine->releaseFundsWithOtp($deal, $validated['otp']);
 
@@ -29,24 +30,54 @@ class SettlementController extends Controller
         ]);
     }
 
+    public function confirmDelivery(Request $request, string $short_code): JsonResponse
+    {
+        $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
+        $this->authorizeBuyer($request, $deal);
+
+        $settledDeal = $this->stateMachine->confirmDelivery($deal);
+
+        return response()->json([
+            'message' => 'Delivery confirmed in good condition. Vendor payout has been released.',
+            'deal'    => new DealResource($settledDeal),
+        ]);
+    }
+
     public function freezeDispute(Request $request, string $short_code): JsonResponse
     {
         $validated = $request->validate([
-            'reason'     => ['required', 'string', 'min:10', 'max:1000'],
-            'actor_role' => ['nullable', 'string', 'in:BUYER,VENDOR'],
+            'reason' => ['required', 'string', 'min:10', 'max:1000'],
         ]);
 
         $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
+        $user = $request->user();
+        $isBuyer = $user->role === 'buyer'
+            && strcasecmp($deal->buyer_email, $user->email) === 0;
+        $isVendor = $user->role === 'vendor'
+            && ((int) $deal->vendor_user_id === (int) $user->id
+                || ($deal->vendor_user_id === null
+                    && $deal->vendor_email !== null
+                    && strcasecmp($deal->vendor_email, $user->email) === 0));
+        abort_unless($isBuyer || $isVendor, 403);
 
         $frozenDeal = $this->stateMachine->freezeForDispute(
             $deal,
             $validated['reason'],
-            $validated['actor_role'] ?? 'BUYER'
+            $isVendor ? 'VENDOR' : 'BUYER'
         );
 
         return response()->json([
             'message' => 'Escrow funds frozen for dispute arbitration.',
             'deal'    => new DealResource($frozenDeal),
         ]);
+    }
+
+    private function authorizeBuyer(Request $request, Deal $deal): void
+    {
+        $user = $request->user();
+        abort_unless(
+            $user->role === 'buyer' && strcasecmp($deal->buyer_email, $user->email) === 0,
+            403
+        );
     }
 }
