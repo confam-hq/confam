@@ -27,6 +27,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/vendor/deals', [AuthController::class, 'myDeals']);
         Route::get('/buyer/deals', [AuthController::class, 'myPurchases']);
         Route::post('/deals', [DealController::class, 'store']);
+        Route::post('/deals/{short_code}/proof', [ProofAndWaybillController::class, 'uploadProof']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
     });
 
