@@ -30,6 +30,7 @@ export default function PaystackModal({
   const [email, setEmail] = useState(deal.buyer_email ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const buyerTotal = deal.total_payable ?? deal.amount + (deal.waybill_fee ?? 0);
 
   const loadPaystackInline = () =>
     new Promise<void>((resolve, reject) => {
@@ -64,7 +65,7 @@ export default function PaystackModal({
       const handler = PaystackPop.setup({
         key: init.checkout.public_key,
         email,
-        amount: Math.round(deal.amount * 100),
+        amount: Math.round(buyerTotal * 100),
         ref: init.checkout.reference,
         onSuccess: (transaction: { reference: string }) => {
           dealApi.verifyPayment(deal.code, transaction.reference || init.checkout.reference || "")
@@ -101,7 +102,7 @@ export default function PaystackModal({
         <div className="p-6">
           <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/8 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Amount to pay</p>
-            <p className="font-mono-tabular mt-2 text-3xl font-bold">{formatNaira(deal.amount)}</p>
+            <p className="font-mono-tabular mt-2 text-3xl font-bold">{formatNaira(buyerTotal)}</p>
             <p className="mt-2 flex items-center gap-2 text-xs text-muted">
               <ShieldCheck size={14} className="text-brand" />
               Your funds stay protected until delivery
@@ -119,13 +120,13 @@ export default function PaystackModal({
             ) : (
               <>
                 <LockKeyhole size={17} />
-                Pay {formatNaira(deal.amount)}
+                Pay {formatNaira(buyerTotal)}
                 <Check size={17} />
               </>
             )}
           </button>
           <p className="mt-4 text-center text-[11px] leading-relaxed text-muted">
-            Secured checkout opens directly here. Do not share this page or your OTP.
+            No separate platform fee is added to the buyer total. Do not share this page or your OTP.
           </p>
         </div>
       </div>

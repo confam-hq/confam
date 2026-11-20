@@ -22,7 +22,7 @@ export default function DashboardShell() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="border-b border-line bg-surface">
+      <header className="neo-card relative z-10 rounded-none border-x-0 border-t-0">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4 sm:px-6">
           <Link to={homeFor(user.role)} aria-label="Confam dashboard">
             <ConfamLogo size={32} />
@@ -39,7 +39,7 @@ export default function DashboardShell() {
                 navigate("/", { replace: true });
               }}
               aria-label="Log out"
-              className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted hover:bg-surface-2 hover:text-ink"
+              className="neo-card grid h-11 w-11 place-items-center rounded-xl text-muted transition hover:-translate-y-0.5 hover:text-ink"
             >
               <LogOut size={16} />
             </button>
@@ -48,7 +48,7 @@ export default function DashboardShell() {
       </header>
 
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1600px] flex-col lg:flex-row">
-        <aside className="border-b border-line bg-surface px-3 py-3 lg:w-60 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
+        <aside className="border-b border-line bg-canvas px-3 py-3 lg:w-60 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
           <p className="mb-2 hidden px-3 text-[11px] font-semibold uppercase tracking-wider text-muted lg:block">
             Workspace
           </p>
@@ -60,7 +60,7 @@ export default function DashboardShell() {
                 end
                 className={({ isActive }) =>
                   `flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                    isActive ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "text-muted hover:bg-surface-2 hover:text-ink"
+                    isActive ? "neo-inset text-emerald-700 dark:text-emerald-300" : "text-muted hover:bg-surface-2 hover:text-ink"
                   }`
                 }
               >
@@ -73,6 +73,14 @@ export default function DashboardShell() {
 
         <main className="min-w-0 flex-1 p-4 sm:p-6">
           <Outlet />
+          <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-muted">
+            <span>5% vendor fee applies to new deals only.</span>
+            <nav aria-label="Legal links" className="flex gap-4">
+              <Link to="/terms" className="hover:text-brand">Terms</Link>
+              <Link to="/privacy" className="hover:text-brand">Privacy</Link>
+              <Link to="/cookies" className="hover:text-brand">Cookies</Link>
+            </nav>
+          </footer>
         </main>
       </div>
     </div>

@@ -12,6 +12,7 @@ import DriverPingPage from "./pages/DriverPingPage";
 import VendorDashboard from "./pages/dashboard/vendor/VendorDashboard";
 import BuyerDashboard from "./pages/dashboard/buyers/BuyerDashboard";
 import AdminDashboard from "./pages/dashboard/admin/AdminDashboard";
+import LegalPage from "./pages/LegalPage";
 
 function MarketingShell() {
   return (
@@ -30,11 +31,15 @@ export default function App() {
     <Routes>
       <Route element={<MarketingShell />}>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
         <Route path="/deal/:code" element={<DealRoomPage />} />
         <Route path="/ping/:token" element={<DriverPingPage />} />
+        <Route path="/terms" element={<LegalPage page="terms" />} />
+        <Route path="/privacy" element={<LegalPage page="privacy" />} />
+        <Route path="/cookies" element={<LegalPage page="cookies" />} />
       </Route>
+
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       <Route element={<ProtectedRoute roles={["vendor"]} />}>
         <Route element={<DashboardShell />}>

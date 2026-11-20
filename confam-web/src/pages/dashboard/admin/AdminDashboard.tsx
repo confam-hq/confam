@@ -13,17 +13,24 @@ export default function AdminDashboard() {
   const [sel, setSel] = useState<Deal | null>(null);
   const [rev, setRev] = useState({ total: 0, fees: 0, settled: 0 });
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   const load = () =>
     adminApi.disputes().then((d) => { setDisputes(d); setSel((s) => d.find((x) => x.code === s?.code) ?? d[0] ?? null); });
 
-  useEffect(() => { load(); adminApi.revenue().then(setRev).catch(() => {}); }, []);
+  useEffect(() => {
+    load().catch((error) => setErr(errMsg(error, "Could not load disputes.")));
+    adminApi.revenue().then(setRev).catch((error) => setErr(errMsg(error, "Could not load revenue.")));
+  }, []);
 
   const resolve = async (outcome: "release" | "refund") => {
     if (!sel) return;
+    const action = outcome === "refund" ? "refund the buyer" : "release funds to the vendor";
+    if (!window.confirm(`Resolve ${sel.code} and ${action}? This action cannot be undone.`)) return;
     setBusy(true);
+    setErr("");
     try { await adminApi.resolve(sel.code, outcome); await load(); }
-    catch (e) { alert(errMsg(e)); }
+    catch (e) { setErr(errMsg(e, "Could not resolve this dispute.")); }
     finally { setBusy(false); }
   };
 
@@ -36,14 +43,20 @@ export default function AdminDashboard() {
         <MetricCard label="Fee revenue" value={formatNaira(rev.fees)} icon={<Percent size={16} />} />
       </div>
 
+      {err && <p role="alert" className="mb-4 text-sm text-red-500">{err}</p>}
+
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <DealTable deals={disputes} selected={sel?.code} onSelect={setSel} />
         <div className="space-y-3">
           <DealInspector deal={sel} />
           {sel && (
-            <div className="card grid grid-cols-2 gap-2 p-4">
-              <button disabled={busy} onClick={() => resolve("release")} className="btn-primary">Release to vendor</button>
-              <button disabled={busy} onClick={() => resolve("refund")} className="btn-ghost">Refund buyer</button>
+            <div className="neo-card space-y-3 rounded-2xl p-4">
+              <p className="text-sm font-semibold">Resolve this case</p>
+              <p className="text-xs text-muted">Review the dispute reason and available packing/waybill evidence before deciding.</p>
+              <button disabled={busy} onClick={() => resolve("release")} className="btn-primary min-h-12 w-full">
+                {busy ? "Updating…" : "Release to vendor"}
+              </button>
+              <button disabled={busy} onClick={() => resolve("refund")} className="btn-ghost min-h-12 w-full">Refund buyer</button>
             </div>
           )}
         </div>

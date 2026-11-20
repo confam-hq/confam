@@ -14,7 +14,13 @@ interface ApiDealResponse {
     short_code: string;
     status: ApiDealStatus;
     item: { title: string; description: string | null };
-    financials: { item_amount_naira: number };
+    financials: {
+      item_amount_naira: number;
+      waybill_fee_naira: number;
+      platform_fee_naira: number;
+      platform_fee_payer: "buyer" | "vendor";
+      total_payable_naira: number;
+    };
     vendor: { name: string };
     buyer: { name: string; phone_masked: string; email: string };
     proof_artifact: {
@@ -39,6 +45,28 @@ interface ApiDealResponse {
   };
 }
 
+export interface WaybillOcrResult {
+  transport_company: string | null;
+  waybill_number: string | null;
+  driver_phone: string | null;
+  vehicle_plate: string | null;
+  origin_park: string | null;
+  destination_park: string | null;
+  is_valid_receipt: boolean;
+  ai_summary_note: string;
+}
+
+export interface DispatchPayload {
+  receipt_image: File;
+  transport_company: string;
+  waybill_number: string;
+  driver_phone: string;
+  vehicle_plate: string;
+  origin_park: string;
+  destination_park: string;
+  ai_summary_note: string;
+}
+
 const dealStatus: Record<ApiDealStatus, Deal["status"]> = {
   AWAITING_PAYMENT: "pending",
   FUNDED_LOCKED: "escrow_locked",
@@ -59,6 +87,10 @@ const mapApiDeal = (deal: ApiDealResponse["deal"]): Deal => {
     title: deal.item.title,
     description: deal.item.description ?? undefined,
     amount: deal.financials.item_amount_naira,
+    waybill_fee: deal.financials.waybill_fee_naira,
+    platform_fee: deal.financials.platform_fee_naira,
+    platform_fee_payer: deal.financials.platform_fee_payer,
+    total_payable: deal.financials.total_payable_naira,
     status: dealStatus[deal.status],
     vendor_name: deal.vendor.name,
     buyer_name: deal.buyer.name,
@@ -103,23 +135,50 @@ const mapApiDeal = (deal: ApiDealResponse["deal"]): Deal => {
 export const authApi = {
   login: (email: string, password: string) =>
     api.post<{ token: string; user: User }>("/auth/login", { email, password }).then((r) => r.data),
-  register: (payload: Record<string, any>) =>
+  register: (payload: Record<string, unknown>) =>
     api.post<{ token: string; user: User }>("/auth/register", payload).then((r) => r.data),
   me: () => api.get<{ user: User }>("/vendor/me").then((r) => r.data.user),
-     banks: () =>
-    api.get<any>("/banks").then((r) => {
-      const raw: any[] = Array.isArray(r.data) ? r.data : r.data?.data ?? r.data?.banks ?? [];
-      const m = new Map<string, Bank>();
-      raw.forEach((b) => m.set(String(b.code), { code: String(b.code), name: b.name }));
-      return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
+  banks: () =>
+    api.get<unknown>("/banks").then((r) => {
+      const payload = r.data;
+      const response = typeof payload === "object" && payload !== null
+        ? payload as { banks?: unknown; data?: unknown }
+        : {};
+      const raw = Array.isArray(payload)
+        ? payload
+        : Array.isArray(response.banks)
+          ? response.banks
+          : Array.isArray(response.data)
+            ? response.data
+            : null;
+      if (!raw || raw.length === 0) throw new Error("Bank list response was empty or invalid.");
+
+      const banks = raw.map((entry): Bank => {
+        if (typeof entry !== "object" || entry === null || !("code" in entry) || !("name" in entry)) {
+          throw new Error("Bank list response contained an invalid bank.");
+        }
+        const bank = entry as { code: unknown; name: unknown };
+        if ((typeof bank.code !== "string" && typeof bank.code !== "number") || typeof bank.name !== "string") {
+          throw new Error("Bank list response contained an invalid bank.");
+        }
+        return { code: String(bank.code), name: bank.name };
+      });
+      return [...new Map(banks.map((bank) => [bank.code, bank])).values()]
+        .sort((a, b) => a.name.localeCompare(b.name));
     }),
 
   resolveBank: (account_number: string, bank_code: string) =>
-    api.post<any>("/banks/resolve", { account_number, bank_code }).then((r) => {
-      const d = r.data?.data ?? r.data;
-      const account_name = d?.account_name ?? d?.accountName;
-      if (!account_name) throw new Error("Could not resolve account");
-      return { account_name: String(account_name) };
+    api.post<unknown>("/banks/resolve", { account_number, bank_code }).then((r) => {
+      const payload = r.data;
+      const response = typeof payload === "object" && payload !== null
+        ? payload as { data?: unknown; account_name?: unknown; accountName?: unknown }
+        : {};
+      const data = typeof response.data === "object" && response.data !== null
+        ? response.data as { account_name?: unknown; accountName?: unknown }
+        : response;
+      const account_name = data.account_name ?? data.accountName;
+      if (typeof account_name !== "string" || !account_name) throw new Error("Could not resolve account");
+      return { account_name };
     }),
 };
 
@@ -163,18 +222,37 @@ export const dealApi = {
 
   scanWaybill: (code: string, image: File) => {
     const fd = new FormData();
-    fd.append("waybill_image", image);
+    fd.append("receipt_image", image);
     return api
-      .post<{ data: Deal }>(`/deals/${code}/waybill/scan`, fd, {
+      .post<{ ocr: WaybillOcrResult }>(`/deals/${code}/parse-waybill`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       })
-      .then((r) => r.data.data);
+      .then((r) => r.data.ocr);
+  },
+
+  dispatch: (code: string, payload: DispatchPayload) => {
+    const fd = new FormData();
+    fd.append("receipt_image", payload.receipt_image);
+    fd.append("transport_company", payload.transport_company);
+    fd.append("waybill_number", payload.waybill_number ?? "");
+    fd.append("driver_phone", payload.driver_phone);
+    fd.append("vehicle_plate", payload.vehicle_plate ?? "");
+    fd.append("origin_park", payload.origin_park ?? "");
+    fd.append("destination_park", payload.destination_park);
+    fd.append("ai_ocr_summary", payload.ai_summary_note.slice(0, 255));
+    return api
+      .post<ApiDealResponse>(`/deals/${code}/dispatch`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => mapApiDeal(r.data.deal));
   },
 
   release: (code: string, otp: string) =>
-    api.post<{ data: Deal }>(`/deals/${code}/release`, { otp }).then((r) => r.data.data),
-  payout: (code: string) => api.post<{ data: Deal }>(`/deals/${code}/payout`).then((r) => r.data.data),
-  dispute: (code: string, reason: string) => api.post(`/deals/${code}/dispute`, { reason }).then((r) => r.data),
+    api.post<ApiDealResponse>(`/deals/${code}/release`, { otp }).then((r) => mapApiDeal(r.data.deal)),
+  confirmDelivery: (code: string) =>
+    api.post<ApiDealResponse>(`/deals/${code}/confirm-delivery`).then((r) => mapApiDeal(r.data.deal)),
+  dispute: (code: string, reason: string) =>
+    api.post<ApiDealResponse>(`/deals/${code}/dispute`, { reason }).then((r) => mapApiDeal(r.data.deal)),
 };
 
 export const driverApi = {
@@ -183,9 +261,12 @@ export const driverApi = {
 };
 
 export const adminApi = {
-  disputes: () => api.get<{ data: Deal[] }>("/admin/disputes").then((r) => r.data.data),
+  disputes: () =>
+    api.get<{ data: ApiDealResponse["deal"][] }>("/admin/disputes")
+      .then((r) => r.data.data.map(mapApiDeal)),
   revenue: () =>
     api.get<{ total: number; fees: number; settled: number }>("/admin/revenue").then((r) => r.data),
   resolve: (code: string, outcome: "release" | "refund") =>
-    api.post(`/admin/disputes/${code}/resolve`, { outcome }).then((r) => r.data),
+    api.post<ApiDealResponse>(`/admin/disputes/${code}/resolve`, { outcome })
+      .then((r) => mapApiDeal(r.data.deal)),
 };

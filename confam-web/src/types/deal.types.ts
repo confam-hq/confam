@@ -38,6 +38,10 @@ export interface Deal {
   title: string;
   description?: string;
   amount: number;
+  waybill_fee?: number;
+  platform_fee?: number;
+  platform_fee_payer?: "buyer" | "vendor";
+  total_payable?: number;
   status: DealStatus;
   vendor_name?: string;
   buyer_name?: string;

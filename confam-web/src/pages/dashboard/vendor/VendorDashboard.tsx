@@ -44,7 +44,10 @@ export default function VendorDashboard() {
   };
 
   const m = useMemo(() => ({
-    escrow: deals.filter((d) => d.status === "escrow_locked" || d.status === "in_transit").reduce((s, d) => s + Number(d.amount), 0),
+    escrow: deals.filter((d) => d.status === "escrow_locked" || d.status === "in_transit").reduce((s, d) => s + Number(d.total_payable ?? d.amount + (d.waybill_fee ?? 0)), 0),
+    netPayout: deals
+      .filter((d) => d.status === "escrow_locked" || d.status === "in_transit")
+      .reduce((s, d) => s + Number(d.amount) + Number(d.waybill_fee ?? 0) - (d.platform_fee_payer === "vendor" ? Number(d.platform_fee ?? 0) : 0), 0),
     manifests: deals.filter((d) => d.waybill && d.status !== "settled").length,
     otps: deals.filter((d) => d.status === "in_transit").length,
   }), [deals]);
@@ -61,10 +64,19 @@ export default function VendorDashboard() {
         <button onClick={() => setModal(true)} className="btn-primary"><Plus size={14} /> New deal</button>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Escrow balance" value={formatNaira(m.escrow)} icon={<Wallet size={16} />} />
+        <MetricCard label="Estimated net payout" value={formatNaira(m.netPayout)} icon={<Wallet size={16} />} />
         <MetricCard label="Active waybills" value={m.manifests} icon={<Truck size={16} />} />
-        <MetricCard label="Pending release OTPs" value={m.otps} icon={<KeyRound size={16} />} />
+        <MetricCard label="Awaiting buyer confirmation" value={m.otps} icon={<KeyRound size={16} />} />
+      </div>
+
+      <div className="neo-card mb-6 flex flex-col gap-2 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold">Clear fee, predictable payout</p>
+          <p className="text-xs text-muted">For new deals, Confam withholds 5% of item + delivery proceeds from your payout after successful delivery. Buyers pay no extra platform fee.</p>
+        </div>
+        <span className="font-mono-tabular text-lg font-bold text-brand">5%</span>
       </div>
 
       {loading ? (
@@ -78,7 +90,7 @@ export default function VendorDashboard() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
           <DealTable deals={deals} selected={sel?.code} onSelect={setSel} />
-          <DealInspector deal={sel} canPayout onUpdated={update} />
+          <DealInspector deal={sel} canFlagNonResponse onUpdated={update} />
         </div>
       )}
 

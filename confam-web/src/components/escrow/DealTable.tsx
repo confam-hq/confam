@@ -23,7 +23,7 @@ export default function DealTable({
   );
 
   return (
-    <div className="card overflow-hidden">
+    <div className="neo-card overflow-hidden rounded-2xl">
       <div className="border-b border-line p-3">
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -35,7 +35,7 @@ export default function DealTable({
           <thead className="text-xs text-muted">
             <tr className="border-b border-line">
               <th className="px-4 py-2 font-medium">Deal</th>
-              <th className="px-4 py-2 font-medium">Amount</th>
+              <th className="px-4 py-2 font-medium">Buyer total</th>
               <th className="px-4 py-2 font-medium">Status</th>
             </tr>
           </thead>
@@ -52,7 +52,9 @@ export default function DealTable({
                   <p className="font-medium">{d.title}</p>
                   <p className="font-mono-tabular text-xs text-muted">{d.code}</p>
                 </td>
-                <td className="font-mono-tabular px-4 py-3">{formatNaira(d.amount)}</td>
+                <td className="font-mono-tabular px-4 py-3">
+                  {formatNaira(d.total_payable ?? d.amount + (d.waybill_fee ?? 0))}
+                </td>
                 <td className="px-4 py-3"><StatusPill status={d.status} /></td>
               </tr>
             ))}

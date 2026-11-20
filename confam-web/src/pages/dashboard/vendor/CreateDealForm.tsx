@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { errMsg } from "../../../api/client";
 import { dealApi } from "../../../api/dealApi";
+import { formatNaira } from "../../../utils/formatNaira";
 import type { CreateDealPayload, Deal, DeliveryMode } from "../../../types/deal.types";
 
 type FormValues = {
@@ -76,6 +77,9 @@ export default function CreateDealForm({
   };
 
   const maskedAccount = user?.account_number ? `•••• ${user.account_number.slice(-4)}` : "Not set";
+  const subtotal = Number(form.item_amount_naira || 0) + Number(form.waybill_fee_naira || 0);
+  const estimatedFee = Math.round(subtotal * 100 * 0.05) / 100;
+  const estimatedPayout = subtotal - estimatedFee;
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -143,8 +147,23 @@ export default function CreateDealForm({
         </div>
       </section>
 
+      <div className="neo-card rounded-2xl p-4">
+        <p className="text-sm font-semibold">Vendor platform fee: 5%</p>
+        <p className="mt-1 text-xs text-muted">
+          Deducted from your item and delivery proceeds after successful delivery. The buyer is not charged an extra platform fee.
+        </p>
+        {subtotal > 0 && (
+          <div className="mt-3 flex justify-between gap-3 text-sm">
+            <span className="text-muted">Estimated fee · estimated payout</span>
+            <span className="font-mono-tabular text-right">
+              {formatNaira(estimatedFee)} · {formatNaira(estimatedPayout)}
+            </span>
+          </div>
+        )}
+      </div>
+
       {err && <p role="alert" className="text-sm text-red-500">{err}</p>}
-      <button disabled={busy} className="btn-primary w-full">
+      <button disabled={busy} className="btn-primary min-h-14 w-full text-base">
         {busy ? "Creating…" : submitLabel}
       </button>
     </form>

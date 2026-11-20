@@ -7,7 +7,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label="Toggle theme"
-      className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted transition hover:bg-surface-2 hover:text-ink"
+      className="neo-card grid h-11 w-11 place-items-center rounded-xl text-muted transition hover:-translate-y-0.5 hover:text-ink"
     >
       {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
     </button>

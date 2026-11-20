@@ -2,55 +2,71 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, homeFor } from "../context/AuthContext";
 import { errMsg } from "../api/client";
-import ConfamLogo from "../components/layout/ConfamLogo";
-
-// Set these to a seeded demo account on your Laravel backend
-const DEMO = { email: "demo@confam.ng", password: "password" };
+import AuthSplitLayout from "../components/auth/AuthSplitLayout";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const loc = useLocation() as any;
+  const loc = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const go = async (e: string, p: string) => {
+  const go = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setErr("");
     try {
-      const u = await login(e, p);
-      nav(loc.state?.from || homeFor(u.role), { replace: true });
-    } catch (x) {
-      setErr(errMsg(x, "Invalid credentials"));
+      const user = await login(email, password);
+      const destination = (loc.state as { from?: string } | null)?.from;
+      nav(destination || homeFor(user.role), { replace: true });
+    } catch (error) {
+      setErr(errMsg(error, "Invalid email or password."));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="mx-auto grid max-w-md px-4 py-12 sm:py-20">
-      <div className="mb-6 flex justify-center"><ConfamLogo size={36} /></div>
-      <form onSubmit={(e) => { e.preventDefault(); go(email, password); }} className="card space-y-4 p-6">
-        <h1 className="text-lg font-semibold">Welcome back</h1>
+    <AuthSplitLayout
+      eyebrow="WELCOME BACK"
+      title="Sign in to Confam."
+      description="Pick up where you left off and see what needs your attention."
+    >
+      <form onSubmit={go} className="neo-card space-y-5 rounded-3xl p-5 sm:p-7">
         <div>
-          <label className="label">Email</label>
-          <input type="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label htmlFor="login-email" className="label">Email address</label>
+          <input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            required
+            className="input neo-inset"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
         </div>
         <div>
-          <label className="label">Password</label>
-          <input type="password" required className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <label htmlFor="login-password" className="label">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            autoComplete="current-password"
+            required
+            className="input neo-inset"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
         </div>
-        {err && <p className="text-xs text-red-500">{err}</p>}
-        <button disabled={busy} className="btn-primary w-full">{busy ? "Signing in…" : "Log in"}</button>
-        <button type="button" disabled={busy} onClick={() => go(DEMO.email, DEMO.password)} className="btn-ghost w-full">
-          1-click demo login
+        {err && <p role="alert" className="text-sm text-red-500">{err}</p>}
+        <button disabled={busy} className="btn-primary min-h-14 w-full rounded-2xl text-base">
+          {busy ? "Signing in…" : "Continue to your workspace"}
         </button>
-        <p className="text-center text-xs text-muted">
-          New merchant? <Link to="/register" className="text-brand hover:underline">Create account</Link>
+        <p className="text-center text-sm text-muted">
+          New to Confam? <Link to="/register" className="font-semibold text-brand hover:underline">Create a buyer or vendor account</Link>
         </p>
       </form>
-    </div>
+    </AuthSplitLayout>
   );
 }

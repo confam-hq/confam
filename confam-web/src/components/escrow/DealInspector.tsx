@@ -1,45 +1,54 @@
 import { useState } from "react";
-import { ExternalLink, MapPin, ShieldCheck, Video } from "lucide-react";
+import { AlertTriangle, ExternalLink, MapPin, ShieldCheck, Video } from "lucide-react";
 import { Link } from "react-router-dom";
 import StatusPill from "./StatusPill";
 import LedgerTimeline from "./LedgerTimeline";
 import { formatNaira } from "../../utils/formatNaira";
 import { dealApi } from "../../api/dealApi";
+import { errMsg } from "../../api/client";
 import type { Deal } from "../../types/deal.types";
 
 export default function DealInspector({
   deal,
-  canPayout,
+  canFlagNonResponse,
   onUpdated,
 }: {
   deal?: Deal | null;
-  canPayout?: boolean;
+  canFlagNonResponse?: boolean;
   onUpdated?: (d: Deal) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  if (!deal)
+  if (!deal) {
     return (
       <div className="card grid min-h-[260px] place-items-center p-6 text-sm text-muted">
         Select a deal to inspect.
       </div>
     );
+  }
 
-  const payout = async () => {
+  const grossPayout = deal.amount + (deal.waybill_fee ?? 0);
+  const vendorPayout = deal.platform_fee_payer === "vendor"
+    ? grossPayout - (deal.platform_fee ?? 0)
+    : grossPayout;
+  const feeRate = grossPayout > 0 ? Math.round(((deal.platform_fee ?? 0) / grossPayout) * 10000) / 100 : 0;
+
+  const flagNonResponse = async () => {
+    if (!window.confirm("Request an admin review because the buyer has not confirmed delivery? Funds will stay frozen during review.")) return;
     setBusy(true);
     setErr("");
     try {
-      onUpdated?.(await dealApi.payout(deal.code));
+      onUpdated?.(await dealApi.dispute(deal.code, "Buyer has not confirmed receipt and condition after dispatch."));
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Request failed");
+      setErr(errMsg(e, "Could not request an admin review."));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="card space-y-5 p-4 lg:sticky lg:top-24">
+    <div className="neo-card space-y-5 rounded-2xl p-4 lg:sticky lg:top-24">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-medium">{deal.title}</p>
@@ -48,12 +57,31 @@ export default function DealInspector({
         <StatusPill status={deal.status} />
       </div>
 
-      <p className="font-mono-tabular text-2xl font-semibold">{formatNaira(deal.amount)}</p>
+      <div>
+        <p className="font-mono-tabular text-2xl font-semibold">
+          {formatNaira(deal.total_payable ?? deal.amount + (deal.waybill_fee ?? 0))}
+        </p>
+        <div className="mt-2 space-y-1 text-xs text-muted">
+          <p>Item: {formatNaira(deal.amount)}</p>
+          {!!deal.waybill_fee && <p>Delivery: {formatNaira(deal.waybill_fee)}</p>}
+          {!!deal.platform_fee && (
+            <>
+              <p>
+                {feeRate}% platform fee: {formatNaira(deal.platform_fee)}
+                {deal.platform_fee_payer === "vendor" ? " · withheld from vendor payout" : " · included in buyer total"}
+              </p>
+              <p className="font-medium text-ink">
+                Estimated vendor payout: {formatNaira(vendorPayout)}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
 
       <div>
         <p className="label flex items-center gap-1.5"><Video size={12} /> Proof of Pack</p>
         {deal.proof_video_url ? (
-          <video src={deal.proof_video_url} controls playsInline className="aspect-video w-full rounded-lg border border-line bg-black" />
+          <video src={deal.proof_video_url ?? undefined} controls playsInline className="aspect-video w-full rounded-lg border border-line bg-black" />
         ) : (
           <div className="grid aspect-video place-items-center rounded-lg border border-dashed border-line text-xs text-muted">
             No proof uploaded
@@ -88,9 +116,10 @@ export default function DealInspector({
 
       {err && <p className="text-xs text-red-500">{err}</p>}
       <div className="flex gap-2">
-        {canPayout && deal.status === "in_transit" && (
-          <button onClick={payout} disabled={busy} className="btn-primary flex-1">
-            {busy ? "Processing…" : "1-click payout"}
+        {canFlagNonResponse && deal.status === "in_transit" && (
+          <button onClick={flagNonResponse} disabled={busy} className="btn-ghost flex-1">
+            <AlertTriangle size={14} />
+            {busy ? "Requesting review…" : "Flag buyer non-response"}
           </button>
         )}
         <Link to={`/deal/${deal.code}`} className="btn-ghost flex-1">

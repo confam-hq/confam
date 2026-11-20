@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Lock } from "lucide-react";
-import { dealApi, } from "../api/dealApi";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { AlertTriangle, CheckCircle2, Lock } from "lucide-react";
+import { dealApi } from "../api/dealApi";
 import { errMsg } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import StatusPill from "../components/escrow/StatusPill";
 import LedgerTimeline from "../components/escrow/LedgerTimeline";
-import OtpReleasePad from "../components/escrow/OtpReleasePad";
 import LiveProofRecorder from "../components/camera/LiveProofRecorder";
 import WaybillScannerCard from "../components/waybill/WaybillScannerCard";
 import PaystackModal from "../components/payment/PaystackModal";
@@ -25,6 +24,9 @@ export default function DealRoomPage() {
   const [blob, setBlob] = useState<{ b: Blob; hash: string } | null>(null);
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [showDispute, setShowDispute] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
 
   const load = useCallback(
     () => dealApi.get(code).then(setDeal).catch((e) => setErr(errMsg(e, "Deal not found"))),
@@ -56,10 +58,13 @@ export default function DealRoomPage() {
       });
   }, [code, load, location.pathname, location.search, navigate]);
 
-  if (err) return <div className="grid min-h-[50vh] place-items-center text-sm text-muted">{err}</div>;
+  if (err && !deal) return <div role="alert" className="grid min-h-[50vh] place-items-center text-sm text-muted">{err}</div>;
   if (!deal) return <div className="grid min-h-[50vh] place-items-center text-sm text-muted">Loading deal…</div>;
 
   const isVendor = user?.role === "vendor";
+  const isBuyer = user?.role === "buyer"
+    && user.email.toLowerCase() === deal.buyer_email?.toLowerCase();
+  const buyerTotal = deal.total_payable ?? deal.amount + (deal.waybill_fee ?? 0);
   const upload = async () => {
     if (!blob) return;
     setBusy(true);
@@ -73,11 +78,29 @@ export default function DealRoomPage() {
     }
   };
 
-  const release = async (otp: string) => {
+  const confirmDelivery = async () => {
+    if (!window.confirm("Confirm that the goods and waybill arrived in good condition? This releases the vendor payout.")) return;
     setBusy(true);
-    try { setDeal(await dealApi.release(deal.code, otp)); }
-    catch (e) { alert(errMsg(e, "Wrong OTP")); }
+    setErr("");
+    try { setDeal(await dealApi.confirmDelivery(deal.code)); }
+    catch (e) { setErr(errMsg(e, "Could not confirm delivery")); }
     finally { setBusy(false); }
+  };
+
+  const openDispute = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setErr("");
+    try {
+      setDeal(await dealApi.dispute(deal.code, disputeReason.trim()));
+      setShowDispute(false);
+      setDisputeReason("");
+      setActionMessage("Dispute opened. Escrow remains frozen pending admin review.");
+    } catch (e) {
+      setErr(errMsg(e, "Could not open a dispute"));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -93,9 +116,12 @@ export default function DealRoomPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
-          <div className="card p-5">
-            <p className="label">Amount</p>
-            <p className="font-mono-tabular text-3xl font-semibold">{formatNaira(deal.amount)}</p>
+          <div className="neo-card rounded-2xl p-5">
+            <p className="label">Buyer total</p>
+            <p className="font-mono-tabular text-3xl font-semibold">{formatNaira(buyerTotal)}</p>
+            <p className="mt-2 text-xs text-muted">
+              Includes item and delivery. The 5% platform fee is withheld from vendor proceeds, not added to your total.
+            </p>
             {deal.description && <p className="mt-3 text-sm text-muted">{deal.description}</p>}
             {deal.status === "pending" && !isVendor && (
               <button onClick={() => setPay(true)} className="btn-primary mt-5 w-full sm:w-auto">
@@ -104,8 +130,63 @@ export default function DealRoomPage() {
             )}
           </div>
 
+          {isBuyer && deal.status === "in_transit" && (
+            <section className="neo-card space-y-4 rounded-2xl p-5" aria-labelledby="confirm-delivery-title">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Delivery check</p>
+                <h2 id="confirm-delivery-title" className="mt-1 text-lg font-semibold">Have you received everything in good condition?</h2>
+                <p className="mt-2 text-sm text-muted">Check the item and waybill. Confirming releases the payout; report any issue to keep escrow frozen for review.</p>
+              </div>
+              <button onClick={confirmDelivery} disabled={busy} className="btn-primary min-h-14 w-full rounded-2xl text-base">
+                <CheckCircle2 size={18} /> {busy ? "Updating deal…" : "Confirm good delivery"}
+              </button>
+              <button onClick={() => setShowDispute((open) => !open)} disabled={busy} className="btn-ghost min-h-12 w-full rounded-2xl">
+                <AlertTriangle size={16} /> Report a problem
+              </button>
+              {showDispute && (
+                <form onSubmit={openDispute} className="space-y-3 border-t border-line pt-4">
+                  <label htmlFor="deal-dispute-reason" className="label">Describe the issue</label>
+                  <textarea
+                    id="deal-dispute-reason"
+                    required
+                    minLength={10}
+                    maxLength={1000}
+                    rows={3}
+                    className="input resize-y"
+                    value={disputeReason}
+                    onChange={(event) => setDisputeReason(event.target.value)}
+                    placeholder="Tell us what is wrong with the item or waybill."
+                  />
+                  <button disabled={busy || disputeReason.trim().length < 10} className="btn-primary min-h-12 w-full">
+                    {busy ? "Opening dispute…" : "Freeze escrow and request review"}
+                  </button>
+                </form>
+              )}
+            </section>
+          )}
+
+          {!user && deal.status === "in_transit" && (
+            <div className="neo-card rounded-2xl p-5">
+              <h2 className="font-semibold">Confirm delivery from your buyer account</h2>
+              <p className="mt-2 text-sm text-muted">Sign in with the email used for this purchase to confirm delivery or open a dispute.</p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <Link to="/login" state={{ from: location.pathname }} className="btn-primary min-h-12">Log in</Link>
+                <Link to="/register" className="btn-ghost min-h-12">Create buyer account</Link>
+              </div>
+            </div>
+          )}
+
+          {deal.status === "disputed" && (
+            <div className="neo-card rounded-2xl p-5">
+              <p className="font-semibold">Dispute under review</p>
+              <p className="mt-1 text-sm text-muted">Escrow stays frozen until an admin reviews the evidence and resolves the case.</p>
+            </div>
+          )}
+          {actionMessage && <p role="status" className="text-sm text-emerald-600 dark:text-emerald-400">{actionMessage}</p>}
+          {err && <p role="alert" className="text-sm text-red-500">{err}</p>}
+
           {isVendor && deal.status === "escrow_locked" && (
-            <div className="card space-y-3 p-5">
+            <div className="neo-card space-y-3 rounded-2xl p-5">
               <p className="text-sm font-medium">Record proof of pack</p>
               <LiveProofRecorder onReady={(b, hash) => setBlob({ b, hash })} />
               {blob && (
@@ -119,10 +200,14 @@ export default function DealRoomPage() {
             </div>
           )}
 
-          {isVendor && deal.status === "escrow_locked" && <WaybillScannerCard code={deal.code} onDone={setDeal} />}
+          {isVendor && deal.status === "escrow_locked" && (
+            deal.proof_video_url
+              ? <WaybillScannerCard code={deal.code} onDone={setDeal} />
+              : <p className="text-xs text-muted">Upload and verify proof-of-pack before scanning the waybill and dispatching.</p>
+          )}
 
           {deal.proof_video_url && (
-            <div className="card p-5">
+            <div className="neo-card rounded-2xl p-5">
               <p className="mb-3 text-sm font-medium">Proof of pack</p>
               <video src={deal.proof_video_url} controls playsInline className="aspect-video w-full rounded-lg bg-black" />
               {deal.ai_match != null && (
@@ -150,14 +235,7 @@ export default function DealRoomPage() {
         </div>
 
         <div className="space-y-4">
-          {!isVendor && deal.status === "in_transit" && (
-            <div className="card p-5">
-              <p className="mb-1 text-sm font-medium">Confirm delivery</p>
-              <p className="mb-4 text-xs text-muted">Enter the 4-digit code only after you have the goods.</p>
-              <OtpReleasePad onSubmit={release} busy={busy} />
-            </div>
-          )}
-          <div className="card p-5">
+          <div className="neo-card rounded-2xl p-5">
             <p className="mb-4 text-sm font-medium">Ledger</p>
             <LedgerTimeline events={deal.events} />
           </div>
