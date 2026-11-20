@@ -67,8 +67,15 @@ class AuthController extends Controller
 
     public function myDeals(Request $request): JsonResponse
     {
-        $deals = $request->user()
-            ->deals()
+        $user = $request->user();
+        $deals = Deal::query()
+            ->where(function ($query) use ($user) {
+                $query->where('vendor_user_id', $user->id)
+                    ->orWhere(function ($query) use ($user) {
+                        $query->whereNull('vendor_user_id')
+                            ->whereRaw('LOWER(vendor_email) = ?', [strtolower($user->email)]);
+                    });
+            })
             ->with(['proofArtifact', 'waybillManifest', 'ledgers'])
             ->latest()
             ->get();

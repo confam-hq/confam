@@ -61,7 +61,6 @@ class PaystackService
         // Fallback for local testing before adding a live Paystack key
         if (blank($this->secretKey) || str_starts_with($this->secretKey, 'sk_test_your')) {
             return [
-                'authorization_url' => "{$callbackUrl}?reference={$reference}&mock_paid=1",
                 'reference'         => $reference,
                 'mock_mode'         => true,
                 'public_key'        => $this->publicKey,
@@ -86,10 +85,10 @@ class PaystackService
             throw new RuntimeException('Paystack initialization failed: ' . ($response->json('message') ?? 'Unknown error'));
         }
 
-        return array_merge(
-            (array) $response->json('data'),
-            ['public_key' => $this->publicKey]
-        );
+        return [
+            'reference'  => $reference,
+            'public_key' => $this->publicKey,
+        ];
     }
 
     public function verifyTransaction(string $reference): array
