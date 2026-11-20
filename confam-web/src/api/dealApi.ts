@@ -152,13 +152,13 @@ export const dealApi = {
   uploadProof: (code: string, video: Blob, sha256: string, onProgress?: (p: number) => void) => {
     const fd = new FormData();
     fd.append("proof_video", video, `proof-${Date.now()}.webm`);
-    fd.append("sha256", sha256);
+    fd.append("client_sha256_hash", sha256);
     return api
-      .post<{ data: Deal }>(`/deals/${code}/proof`, fd, {
+      .post<ApiDealResponse>(`/deals/${code}/proof`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (e) => e.total && onProgress?.(Math.round((e.loaded / e.total) * 100)),
       })
-      .then((r) => r.data.data);
+      .then((r) => mapApiDeal(r.data.deal));
   },
 
   scanWaybill: (code: string, image: File) => {
