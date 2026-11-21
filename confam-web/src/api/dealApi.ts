@@ -320,6 +320,11 @@ export const driverApi = {
 };
 
 export const adminApi = {
+  dormantUsers: () =>
+    api.get<{ data: Array<{ id: number; name: string; email: string; phone: string; role: string; created_at: string }> }>("/admin/users/dormant")
+      .then((r) => r.data.data),
+  deleteDormantUser: (id: number) =>
+    api.delete<{ message: string }>(`/admin/users/${id}`).then((r) => r.data),
   disputes: () =>
     api.get<{ data: ApiDealResponse["deal"][] }>("/admin/disputes")
       .then((r) => r.data.data.map(mapApiDeal)),

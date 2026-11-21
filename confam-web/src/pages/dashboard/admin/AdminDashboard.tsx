@@ -18,6 +18,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [dormantUsers, setDormantUsers] = useState<Array<{ id: number; name: string; email: string; phone: string; role: string; created_at: string }>>([]);
+  const [dormantLoading, setDormantLoading] = useState(true);
   const toast = useToast();
 
   const load = () =>
@@ -28,7 +30,24 @@ export default function AdminDashboard() {
       .catch((error) => setErr(errMsg(error, "Could not load disputes.")))
       .finally(() => setLoading(false));
     adminApi.revenue().then(setRev).catch((error) => setErr(errMsg(error, "Could not load revenue.")));
+    adminApi.dormantUsers()
+      .then(setDormantUsers)
+      .catch((error) => setErr(errMsg(error, "Could not load dormant accounts.")))
+      .finally(() => setDormantLoading(false));
   }, []);
+
+  const deleteDormantUser = async (user: { id: number; name: string }) => {
+    if (!window.confirm(`Delete dormant account "${user.name}"? This cannot be undone.`)) return;
+    try {
+      await adminApi.deleteDormantUser(user.id);
+      setDormantUsers((current) => current.filter((item) => item.id !== user.id));
+      toast.success("Dormant account deleted", `${user.name} was removed.`);
+    } catch (error) {
+      const message = errMsg(error, "Could not delete this dormant account.");
+      setErr(message);
+      toast.error("Could not delete account", message);
+    }
+  };
 
   const resolve = async (outcome: "release" | "refund") => {
     if (!sel) return;
@@ -80,6 +99,35 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      <section className="neo-card mt-6 rounded-2xl p-4">
+        <h2 className="text-base font-semibold">Dormant unverified accounts</h2>
+        <p className="mt-1 text-xs text-muted">Accounts that have not completed email verification and have no deals.</p>
+        {dormantLoading ? (
+          <p className="mt-4 text-sm text-muted">Loading accounts…</p>
+        ) : dormantUsers.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">No dormant accounts found.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs text-muted">
+                <tr><th className="pb-2">Name</th><th className="pb-2">Email</th><th className="pb-2">Role</th><th className="pb-2"></th></tr>
+              </thead>
+              <tbody>
+                {dormantUsers.map((user) => (
+                  <tr key={user.id} className="border-t border-line">
+                    <td className="py-3 pr-3">{user.name}</td>
+                    <td className="py-3 pr-3">{user.email}</td>
+                    <td className="py-3 pr-3 capitalize">{user.role}</td>
+                    <td className="py-3 text-right">
+                      <button onClick={() => deleteDormantUser(user)} className="btn-ghost text-red-500">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
       <DatabaseResetPanel />
     </div>
   );

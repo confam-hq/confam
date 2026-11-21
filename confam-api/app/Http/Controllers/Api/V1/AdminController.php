@@ -47,6 +47,33 @@ class AdminController extends Controller
         ]);
     }
 
+    public function dormantUsers(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $users = User::query()
+            ->where('role', '!=', 'admin')
+            ->whereNull('email_verified_at')
+            ->latest()
+            ->get(['id', 'name', 'email', 'phone', 'role', 'created_at']);
+
+        return response()->json(['data' => $users]);
+    }
+
+    public function deleteDormantUser(Request $request, User $user): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        abort_if($user->role === 'admin', 403, 'Administrator accounts cannot be deleted here.');
+        abort_if($user->email_verified_at !== null, 409, 'Only unverified dormant accounts can be deleted.');
+        abort_if($user->deals()->exists(), 409, 'This account has deals and cannot be deleted from dormant accounts.');
+
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json(['message' => 'Dormant account deleted.', 'deleted_user_id' => $user->id]);
+    }
+
     public function databaseResetStatus(Request $request): JsonResponse
     {
         $this->authorizeAdmin($request);

@@ -126,7 +126,8 @@ export default function RegisterPage() {
         account_name: f.role === "vendor" ? accountName : "",
       });
       toast.success("Account created", "Check your email for a verification code.");
-      nav(`/verify-email?email=${encodeURIComponent(f.email)}`, { replace: true });
+      sessionStorage.setItem("confam.pendingVerificationEmail", f.email);
+      nav("/verify-email", { replace: true, state: { email: f.email } });
     } catch (error) {
       const message = errMsg(error);
       setErr(message);

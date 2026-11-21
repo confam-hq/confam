@@ -44,6 +44,8 @@ Route::prefix('v1')->group(function () {
         Route::delete('/auth/sessions/{tokenId}', [AuthController::class, 'revokeSession']);
         Route::get('/admin/disputes', [AdminController::class, 'disputes']);
         Route::get('/admin/revenue', [AdminController::class, 'revenue']);
+        Route::get('/admin/users/dormant', [AdminController::class, 'dormantUsers']);
+        Route::delete('/admin/users/{user}', [AdminController::class, 'deleteDormantUser']);
         Route::get('/admin/database/reset-status', [AdminController::class, 'databaseResetStatus']);
         Route::post('/admin/disputes/{short_code}/resolve', [AdminController::class, 'resolveDispute']);
         Route::post('/admin/database/reset', [AdminController::class, 'resetDatabase']);
