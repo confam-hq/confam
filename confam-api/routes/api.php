@@ -1,25 +1,29 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BankVerifyController;
 use App\Http\Controllers\Api\V1\DealController;
+use App\Http\Controllers\Api\V1\DriverPingController;
 use App\Http\Controllers\Api\V1\PaystackController;
 use App\Http\Controllers\Api\V1\ProofAndWaybillController;
-use App\Http\Controllers\Api\V1\DriverPingController;
 use App\Http\Controllers\Api\V1\SettlementController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::get('/health', fn () => response()->json([
-        'status'    => 'confamed',
-        'service'   => 'Confam Escrow & Waybill API v1',
+        'status' => 'confamed',
+        'service' => 'Confam Escrow & Waybill API v1',
         'timestamp' => now()->toIso8601String(),
     ]));
 
     // Auth & Bank Account Resolution
-    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/verification/resend', [AuthController::class, 'resendVerificationCode'])->middleware('throttle:5,1');
+    Route::post('/auth/verification/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:10,1');
+    Route::post('/auth/password/forgot', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+    Route::post('/auth/password/reset', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
     Route::get('/banks', [BankVerifyController::class, 'listBanks']);
     Route::post('/banks/resolve', [BankVerifyController::class, 'resolveAccount']);
 
@@ -35,9 +39,16 @@ Route::prefix('v1')->group(function () {
         Route::post('/deals/{short_code}/release', [SettlementController::class, 'releaseWithOtp']);
         Route::post('/deals/{short_code}/confirm-delivery', [SettlementController::class, 'confirmDelivery']);
         Route::post('/deals/{short_code}/dispute', [SettlementController::class, 'freezeDispute']);
+        Route::post('/auth/unlock', [AuthController::class, 'unlock'])->middleware('throttle:10,1');
+        Route::get('/auth/sessions', [AuthController::class, 'sessions']);
+        Route::delete('/auth/sessions/{tokenId}', [AuthController::class, 'revokeSession']);
         Route::get('/admin/disputes', [AdminController::class, 'disputes']);
         Route::get('/admin/revenue', [AdminController::class, 'revenue']);
+        Route::get('/admin/database/reset-status', [AdminController::class, 'databaseResetStatus']);
         Route::post('/admin/disputes/{short_code}/resolve', [AdminController::class, 'resolveDispute']);
+        Route::post('/admin/database/reset', [AdminController::class, 'resetDatabase']);
+        Route::get('/admin/database/backups/{fileName}', [AdminController::class, 'downloadDatabaseBackup'])
+            ->where('fileName', '[A-Za-z0-9._-]+');
         Route::post('/auth/logout', [AuthController::class, 'logout']);
     });
 
