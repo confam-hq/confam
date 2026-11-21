@@ -5,7 +5,7 @@ import { authApi } from "../../../api/dealApi";
 import type { VendorProfilePayload } from "../../../api/dealApi";
 import { errMsg } from "../../../api/client";
 import Select from "../../../components/ui/Select";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from "../../../context/useAuth";
 import { useToast } from "../../../context/useToast";
 import type { Bank } from "../../../types/deal.types";
 

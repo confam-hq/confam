@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Loader2, Search } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
+import Skeleton from "../feedback/Skeleton";
 
 export interface Option { value: string; label: string; hint?: string }
 
@@ -39,16 +40,6 @@ export default function Select({
   }, []);
 
   useEffect(() => {
-    if (open) {
-      setQ("");
-      setActive(Math.max(0, options.findIndex((o) => o.value === value)));
-      if (searchable) setTimeout(() => search.current?.focus(), 0);
-    }
-    // eslint-disable-next-line
-  }, [open]);
-
-  useEffect(() => setActive(0), [q]);
-  useEffect(() => {
     (list.current?.children[active] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
   }, [active, open]);
 
@@ -58,7 +49,11 @@ export default function Select({
     if (!open) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((i) => Math.min(i + 1, filtered.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter") { e.preventDefault(); filtered[active] && pick(filtered[active].value); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      const option = filtered[active];
+      if (option) pick(option.value);
+    }
     else if (e.key === "Escape") setOpen(false);
   };
 
@@ -67,7 +62,14 @@ export default function Select({
       <button
         type="button"
         disabled={disabled || loading}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open) {
+            setQ("");
+            setActive(Math.max(0, options.findIndex((o) => o.value === value)));
+            if (searchable) setTimeout(() => search.current?.focus(), 0);
+          }
+          setOpen((current) => !current);
+        }}
         aria-haspopup="listbox"
         aria-expanded={open}
         className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-surface text-left text-sm outline-none transition disabled:opacity-60 ${
@@ -75,10 +77,10 @@ export default function Select({
         } ${open ? "border-brand ring-1 ring-brand" : "border-line hover:border-muted/60"}`}
       >
         <span className={`truncate ${selected ? "text-ink" : "text-muted"}`}>
-          {loading ? "Loading…" : selected?.label ?? placeholder}
+          {loading ? <Skeleton className="h-3 w-24" /> : selected?.label ?? placeholder}
         </span>
         {loading ? (
-          <Loader2 size={14} className="shrink-0 animate-spin text-muted" />
+          <Skeleton className="size-3 shrink-0 rounded-full" />
         ) : (
           <ChevronDown size={14} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
         )}
@@ -97,7 +99,10 @@ export default function Select({
                 <input
                   ref={search}
                   value={q}
-                  onChange={(e) => setQ(e.target.value)}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    setActive(0);
+                  }}
                   placeholder="Search…"
                   className="w-full rounded-md bg-surface-2 py-2 pl-8 pr-2 text-sm text-ink outline-none placeholder:text-muted"
                 />

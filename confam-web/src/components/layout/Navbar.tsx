@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { LogOut, Search } from "lucide-react";
 import ConfamLogo from "./ConfamLogo";
 import ThemeToggle from "./ThemeToggle";
-import { useAuth, homeFor } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
+import { homeFor } from "../../context/authRoutes";
 import { useToast } from "../../context/useToast";
 
 export default function Navbar() {
@@ -52,10 +53,15 @@ export default function Navbar() {
             <>
               <ThemeToggle />
               <button
-                onClick={() => {
-                  logout();
-                  toast.info("Signed out", "Your Confam session has ended.");
-                  nav("/", { replace: true });
+                onClick={async () => {
+                  try {
+                    await logout();
+                    toast.info("Signed out", "Your Confam session has ended.");
+                  } catch (error) {
+                    toast.error("Session ended locally", error instanceof Error ? error.message : "The server could not revoke the session.");
+                  } finally {
+                    nav("/", { replace: true });
+                  }
                 }}
                 aria-label="Log out"
                 className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted hover:bg-surface-2 hover:text-ink"

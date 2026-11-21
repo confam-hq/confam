@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, Loader2, RefreshCw, ShoppingBag, Store } from "lucide-react";
-import { useAuth, homeFor } from "../context/AuthContext";
-import { authApi } from "../api/dealApi";
-import { errMsg } from "../api/client";
-import AuthSplitLayout from "../components/auth/AuthSplitLayout";
-import Select from "../components/ui/Select";
-import { useToast } from "../context/useToast";
-import type { Bank } from "../types/deal.types";
+import { CheckCircle2, RefreshCw, ShoppingBag, Store } from "lucide-react";
+import { useAuth } from "../../context/useAuth";
+import { authApi } from "../../api/dealApi";
+import { errMsg } from "../../api/client";
+import AuthSplitLayout from "../../components/auth/AuthSplitLayout";
+import Select from "../../components/ui/Select";
+import Skeleton from "../../components/feedback/Skeleton";
+import { useToast } from "../../context/useToast";
+import type { Bank } from "../../types/deal.types";
 
 type AccountRole = "buyer" | "vendor";
 type FormValues = {
@@ -18,6 +19,8 @@ type FormValues = {
   password: string;
   bank_code: string;
   account_number: string;
+  terms_accepted: boolean;
+  privacy_accepted: boolean;
 };
 
 const initialForm: FormValues = {
@@ -28,6 +31,8 @@ const initialForm: FormValues = {
   password: "",
   bank_code: "",
   account_number: "",
+  terms_accepted: false,
+  privacy_accepted: false,
 };
 
 export default function RegisterPage() {
@@ -110,12 +115,12 @@ export default function RegisterPage() {
       if (f.role === "vendor" && !accountName) {
         throw new Error("Verify your payout account before creating a vendor account.");
       }
-      const user = await register({
+      await register({
         ...f,
         account_name: f.role === "vendor" ? accountName : "",
       });
-      toast.success("Account created", "Welcome to Confam.");
-      nav(homeFor(user.role), { replace: true });
+      toast.success("Account created", "Check your email for a verification code.");
+      nav(`/verify-email?email=${encodeURIComponent(f.email)}`, { replace: true });
     } catch (error) {
       const message = errMsg(error);
       setErr(message);
@@ -234,7 +239,7 @@ export default function RegisterPage() {
                 }}
               />
             </div>
-            {resolving && <p className="flex items-center gap-2 text-xs text-muted"><Loader2 size={12} className="animate-spin" /> Verifying account…</p>}
+            {resolving && <p className="flex items-center gap-2 text-xs text-muted"><Skeleton className="h-3 w-36" /><span className="sr-only">Verifying account…</span></p>}
             {accountName && (
               <p className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 size={14} /> {accountName}
@@ -242,6 +247,29 @@ export default function RegisterPage() {
             )}
           </section>
         )}
+
+        <div className="space-y-3 border-t border-line pt-4">
+          <label className="flex items-start gap-3 text-sm text-muted">
+            <input
+              type="checkbox"
+              required
+              checked={f.terms_accepted}
+              onChange={(event) => setF((previous) => ({ ...previous, terms_accepted: event.target.checked }))}
+              className="mt-0.5 size-4 shrink-0 accent-brand"
+            />
+            <span>I agree to the <Link to="/terms" target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">Terms and Conditions</Link>.</span>
+          </label>
+          <label className="flex items-start gap-3 text-sm text-muted">
+            <input
+              type="checkbox"
+              required
+              checked={f.privacy_accepted}
+              onChange={(event) => setF((previous) => ({ ...previous, privacy_accepted: event.target.checked }))}
+              className="mt-0.5 size-4 shrink-0 accent-brand"
+            />
+            <span>I have read and agree to the <Link to="/privacy" target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">Privacy Policy</Link>.</span>
+          </label>
+        </div>
 
         {err && <p role="alert" className="text-sm text-red-500">{err}</p>}
         <button disabled={busy || (f.role === "vendor" && !accountName)} className="btn-primary min-h-14 w-full rounded-2xl text-base">

@@ -48,6 +48,15 @@ export default function VendorAnalyticsPage() {
         .reduce((sum, deal) => sum + Number(deal.platform_fee ?? 0), 0),
     };
   }, [deals]);
+  const statusCounts = useMemo(
+    () => statusLabels.map(({ status, label }) => ({
+      status,
+      label,
+      count: deals.filter((deal) => deal.status === status).length,
+    })),
+    [deals],
+  );
+  const maxStatusCount = Math.max(1, ...statusCounts.map(({ count }) => count));
 
   const retry = () => {
     setLoading(true);
@@ -83,22 +92,32 @@ export default function VendorAnalyticsPage() {
           <div className="grid gap-4 xl:grid-cols-2">
             <section className="neo-card rounded-2xl p-5">
               <h2 className="font-semibold">Deals by status</h2>
-              <div className="mt-5 space-y-4">
-                {statusLabels.map(({ status, label }) => {
-                  const count = deals.filter((deal) => deal.status === status).length;
-                  const width = deals.length ? (count / deals.length) * 100 : 0;
-                  return (
-                    <div key={status}>
-                      <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                        <span className="text-muted">{label}</span>
-                        <span className="font-mono-tabular">{count}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-                        <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${width}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="mt-5">
+                <svg
+                  viewBox="0 0 600 250"
+                  role="img"
+                  aria-label="Bar chart showing the number of deals in each status"
+                  className="w-full overflow-visible text-brand"
+                >
+                  {[0, 1, 2, 3].map((line) => {
+                    const y = 200 - line * 55;
+                    return <line key={line} x1="38" x2="575" y1={y} y2={y} stroke="currentColor" strokeOpacity="0.14" />;
+                  })}
+                  {statusCounts.map(({ status, label, count }, index) => {
+                    const height = count ? Math.max(4, (count / maxStatusCount) * 165) : 0;
+                    const x = 55 + index * 88;
+                    return (
+                      <g key={status}>
+                        <text x={x + 24} y={Math.max(20, 200 - height - 8)} textAnchor="middle" className="fill-ink text-xs">{count}</text>
+                        <rect x={x} y={200 - height} width="48" height={height} rx="6" className="fill-brand" />
+                        <text x={x + 24} y="222" textAnchor="middle" className="fill-muted text-[9px]">{label}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <p className="sr-only">Counts: {statusCounts.map(({ label, count }) =>
+                  `${label}: ${count}`
+                ).join(", ")}.</p>
               </div>
             </section>
 

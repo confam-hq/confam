@@ -1,6 +1,6 @@
 import { LockKeyhole, LogOut, Moon, Sun } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
+import { useAuth } from "../../../context/useAuth";
 import { useTheme } from "../../../context/ThemeContext";
 import { useToast } from "../../../context/useToast";
 
@@ -58,10 +58,15 @@ export default function VendorSettingsPage() {
               <Link to="/dashboard/vendor/profile" className="btn-ghost min-h-11">Review profile</Link>
               <button
                 type="button"
-                onClick={() => {
-                  logout();
-                  toast.info("Signed out", "Your Confam session has ended.");
-                  navigate("/", { replace: true });
+                onClick={async () => {
+                  try {
+                    await logout();
+                    toast.info("Signed out", "Your Confam session has ended.");
+                  } catch (error) {
+                    toast.error("Session ended locally", error instanceof Error ? error.message : "The server could not revoke the session.");
+                  } finally {
+                    navigate("/", { replace: true });
+                  }
                 }}
                 className="btn-ghost min-h-11"
               >

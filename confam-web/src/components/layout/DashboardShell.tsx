@@ -2,18 +2,21 @@ import {
   ChartNoAxesColumnIncreasing,
   LayoutDashboard,
   LogOut,
+  Monitor,
   Plus,
   Settings2,
   ShieldAlert,
   UserRound,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth, homeFor } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
+import { homeFor } from "../../context/authRoutes";
 import { useToast } from "../../context/useToast";
 import ConfamLogo from "./ConfamLogo";
 import ThemeToggle from "./ThemeToggle";
 
-export default function DashboardShell() {
+export default function DashboardShell({ children }: { children?: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -36,6 +39,7 @@ export default function DashboardShell() {
           { to: "/dashboard/vendor/settings", label: "Settings", icon: Settings2 },
         ]
       : []),
+    { to: "/sessions", label: "Sessions", icon: Monitor },
   ];
 
   return (
@@ -52,10 +56,15 @@ export default function DashboardShell() {
             </div>
             <ThemeToggle />
             <button
-              onClick={() => {
-                logout();
-                toast.info("Signed out", "Your Confam session has ended.");
-                navigate("/", { replace: true });
+              onClick={async () => {
+                try {
+                  await logout();
+                  toast.info("Signed out", "Your Confam session has ended.");
+                } catch (error) {
+                  toast.error("Session ended locally", error instanceof Error ? error.message : "The server could not revoke the session.");
+                } finally {
+                  navigate("/", { replace: true });
+                }
               }}
               aria-label="Log out"
               className="neo-card grid h-11 w-11 place-items-center rounded-xl text-muted transition hover:-translate-y-0.5 hover:text-ink"
@@ -91,7 +100,7 @@ export default function DashboardShell() {
         </aside>
 
         <main className="min-w-0 flex-1 p-4 sm:p-6">
-          <Outlet />
+          {children ?? <Outlet />}
           <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-muted">
             <span>5% vendor fee applies to new deals only.</span>
             <nav aria-label="Legal links" className="flex gap-4">

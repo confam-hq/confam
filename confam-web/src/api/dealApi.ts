@@ -75,6 +75,13 @@ export interface VendorProfilePayload {
   account_number: string;
 }
 
+export interface AuthSession {
+  id: number;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
 const dealStatus: Record<ApiDealStatus, Deal["status"]> = {
   AWAITING_PAYMENT: "pending",
   FUNDED_LOCKED: "escrow_locked",
@@ -144,7 +151,20 @@ export const authApi = {
   login: (email: string, password: string) =>
     api.post<{ token: string; user: User }>("/auth/login", { email, password }).then((r) => r.data),
   register: (payload: Record<string, unknown>) =>
-    api.post<{ token: string; user: User }>("/auth/register", payload).then((r) => r.data),
+    api.post<{ message: string; email: string }>("/auth/register", payload).then((r) => r.data),
+  verifyEmail: (email: string, code: string) =>
+    api.post<{ message: string }>("/auth/verification/verify", { email, code }).then((r) => r.data),
+  resendVerification: (email: string) =>
+    api.post<{ message: string }>("/auth/verification/resend", { email }).then((r) => r.data),
+  forgotPassword: (email: string) =>
+    api.post<{ message: string }>("/auth/password/forgot", { email }).then((r) => r.data),
+  resetPassword: (email: string, code: string, password: string, password_confirmation: string) =>
+    api.post<{ message: string }>("/auth/password/reset", { email, code, password, password_confirmation }).then((r) => r.data),
+  sessions: () =>
+    api.get<{ current_token_id: number | null; sessions: AuthSession[] }>("/auth/sessions").then((r) => r.data),
+  revokeSession: (id: number) =>
+    api.delete<{ message: string; current: boolean }>(`/auth/sessions/${id}`).then((r) => r.data),
+  logout: () => api.post<{ message: string }>("/auth/logout").then((r) => r.data),
   me: () => api.get<{ user: User }>("/vendor/me").then((r) => r.data.user),
   updateProfile: (payload: VendorProfilePayload) =>
     api.patch<{ user: User }>("/vendor/profile", payload).then((r) => r.data.user),

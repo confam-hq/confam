@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth, homeFor } from "../context/AuthContext";
-import { errMsg } from "../api/client";
-import AuthSplitLayout from "../components/auth/AuthSplitLayout";
-import { useToast } from "../context/useToast";
+import { useAuth } from "../../context/useAuth";
+import { homeFor } from "../../context/authRoutes";
+import { errMsg } from "../../api/client";
+import AuthSplitLayout from "../../components/auth/AuthSplitLayout";
+import { useToast } from "../../context/useToast";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const loc = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const toast = useToast();
@@ -20,7 +22,7 @@ export default function LoginPage() {
     setBusy(true);
     setErr("");
     try {
-      const user = await login(email, password);
+      const user = await login(email, password, remember);
       toast.success("Signed in", "Your Confam workspace is ready.");
       const destination = (loc.state as { from?: string } | null)?.from;
       nav(destination || homeFor(user.role), { replace: true });
@@ -63,6 +65,18 @@ export default function LoginPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
+        </div>
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <label className="flex items-center gap-2 text-muted">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(event) => setRemember(event.target.checked)}
+              className="size-4 accent-brand"
+            />
+            Remember me
+          </label>
+          <Link to="/forgot-password" className="font-semibold text-brand hover:underline">Forgot password?</Link>
         </div>
         {err && <p role="alert" className="text-sm text-red-500">{err}</p>}
         <button disabled={busy} className="btn-primary min-h-14 w-full rounded-2xl text-base">

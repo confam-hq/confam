@@ -1,42 +1,33 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import { authApi, type VendorProfilePayload } from "../api/dealApi";
-import { TOKEN_KEY } from "../api/client";
-import type { User, Role } from "../types/deal.types";
-
-interface AuthCtx {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  register: (payload: Record<string, any>) => Promise<User>;
-  updateProfile: (payload: VendorProfilePayload) => Promise<User>;
-  logout: () => void;
-}
-const Ctx = createContext<AuthCtx>(null as any);
-
-export const homeFor = (r: Role) => `/dashboard/${r}`;
+import { getStoredToken, TOKEN_KEY } from "../api/client";
+import type { User } from "../types/deal.types";
+import { AuthContext } from "./AuthContextValue";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(!!localStorage.getItem(TOKEN_KEY));
+  const [loading, setLoading] = useState(!!getStoredToken());
 
   useEffect(() => {
-    if (!localStorage.getItem(TOKEN_KEY)) return;
-    authApi.me().then(setUser).catch(() => localStorage.removeItem(TOKEN_KEY)).finally(() => setLoading(false));
+    if (!getStoredToken()) return;
+    authApi.me().then(setUser).catch(() => {
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
+    }).finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, remember = false) => {
     const { token, user } = await authApi.login(email, password);
-    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
     setUser(user);
     return user;
   }, []);
 
-  const register = useCallback(async (payload: Record<string, any>) => {
-    const { token, user } = await authApi.register(payload);
-    localStorage.setItem(TOKEN_KEY, token);
-    setUser(user);
-    return user;
+  const register = useCallback(async (payload: Record<string, unknown>) => {
+    await authApi.register(payload);
   }, []);
 
   const updateProfile = useCallback(async (payload: VendorProfilePayload) => {
@@ -45,11 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user;
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    setUser(null);
+  const logout = useCallback(async (revokeServerSession = true) => {
+    try {
+      if (revokeServerSession && getStoredToken()) await authApi.logout();
+    } finally {
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
+      setUser(null);
+    }
   }, []);
 
-  return <Ctx.Provider value={{ user, loading, login, register, updateProfile, logout }}>{children}</Ctx.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, register, updateProfile, logout }}>{children}</AuthContext.Provider>;
 }
-export const useAuth = () => useContext(Ctx);

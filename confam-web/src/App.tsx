@@ -4,8 +4,12 @@ import Footer from "./components/layout/Footer";
 import DashboardShell from "./components/layout/DashboardShell";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import VerifyEmailPage from "./pages/auth/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import SessionsPage from "./pages/auth/SessionsPage";
 import CreateDealPage from "./pages/CreateDealPage";
 import DealRoomPage from "./pages/DealRoomPage";
 import DriverPingPage from "./pages/DriverPingPage";
@@ -38,16 +42,25 @@ export default function App() {
       <Routes>
         <Route element={<MarketingShell />}>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/deal/:code" element={<DealRoomPage />} />
           <Route path="/ping/:token" element={<DriverPingPage />} />
           <Route path="/terms" element={<LegalPage page="terms" />} />
           <Route path="/privacy" element={<LegalPage page="privacy" />} />
           <Route path="/cookies" element={<LegalPage page="cookies" />} />
         </Route>
 
+        <Route path="/deal/:code" element={<DealRoomPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/403" element={<StatusPage code="403" />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardShell />}>
+            <Route path="/sessions" element={<SessionsPage />} />
+          </Route>
+        </Route>
 
         <Route element={<ProtectedRoute roles={["vendor"]} />}>
           <Route element={<DashboardShell />}>

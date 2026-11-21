@@ -2,6 +2,9 @@ import axios from "axios";
 
 export const TOKEN_KEY = "confam_token";
 
+export const getStoredToken = () =>
+  localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
+
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
 const normalizedBaseUrl = configuredBaseUrl?.replace(/\/+$/, "");
 const apiBaseUrl = normalizedBaseUrl
@@ -40,7 +43,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getStoredToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -48,8 +51,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401 && localStorage.getItem(TOKEN_KEY)) {
+    if (err.response?.status === 401 && getStoredToken()) {
       localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
       window.location.href = "/login";
     }
     return Promise.reject(err);

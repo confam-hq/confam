@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, Lock } from "lucide-react";
 import { isAxiosError } from "axios";
 import { dealApi } from "../api/dealApi";
 import { errMsg } from "../api/client";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import StatusPill from "../components/escrow/StatusPill";
 import LedgerTimeline from "../components/escrow/LedgerTimeline";
 import LiveProofRecorder from "../components/camera/LiveProofRecorder";
@@ -13,11 +13,14 @@ import PaystackModal from "../components/payment/PaystackModal";
 import LoadingScreen from "../components/feedback/LoadingScreen";
 import DriverLocationStatus from "../components/escrow/DriverLocationStatus";
 import StatusPage from "./StatusPage";
+import Navbar from "../components/layout/Navbar";
+import Footer from "../components/layout/Footer";
+import DashboardShell from "../components/layout/DashboardShell";
 import { formatNaira } from "../utils/formatNaira";
 import { useToast } from "../context/useToast";
 import type { Deal } from "../types/deal.types";
 
-export default function DealRoomPage() {
+function DealRoomContent() {
   const { code = "" } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -69,6 +72,7 @@ export default function DealRoomPage() {
             `${latest.title} · ${ping.lat.toFixed(5)}, ${ping.lng.toFixed(5)}`,
           );
         }
+
         lastPing = nextPing;
         setDeal(latest);
         pollErrorShown = false;
@@ -308,6 +312,22 @@ export default function DealRoomPage() {
       </div>
 
       {pay && <PaystackModal deal={deal} onClose={() => setPay(false)} />}
+    </div>
+  );
+}
+
+export default function DealRoomPage() {
+  const { user } = useAuth();
+
+  if (user?.role === "vendor") {
+    return <DashboardShell><DealRoomContent /></DashboardShell>;
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main className="flex-1"><DealRoomContent /></main>
+      <Footer />
     </div>
   );
 }
