@@ -33,10 +33,16 @@ export default function VendorProfilePage() {
     let active = true;
     authApi.banks()
       .then((result) => { if (active) setBanks(result); })
-      .catch((cause) => { if (active) setBankLoadError(errMsg(cause, "Could not load the bank list.")); })
+      .catch((cause) => {
+        if (active) {
+          const message = errMsg(cause, "Could not load the bank list.");
+          setBankLoadError(message);
+          toast.error("Could not load banks", message);
+        }
+      })
       .finally(() => { if (active) setBanksLoading(false); });
     return () => { active = false; };
-  }, [bankRequest]);
+  }, [bankRequest, toast]);
 
   const bankOptions = useMemo(() => {
     const options = banks.map((bank) => ({ value: bank.code, label: bank.name }));

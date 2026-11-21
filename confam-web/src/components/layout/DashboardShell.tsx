@@ -9,12 +9,14 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth, homeFor } from "../../context/AuthContext";
+import { useToast } from "../../context/useToast";
 import ConfamLogo from "./ConfamLogo";
 import ThemeToggle from "./ThemeToggle";
 
 export default function DashboardShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   if (!user) return null;
 
@@ -52,6 +54,7 @@ export default function DashboardShell() {
             <button
               onClick={() => {
                 logout();
+                toast.info("Signed out", "Your Confam session has ended.");
                 navigate("/", { replace: true });
               }}
               aria-label="Log out"

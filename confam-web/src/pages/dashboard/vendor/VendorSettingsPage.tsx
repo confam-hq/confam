@@ -2,11 +2,13 @@ import { LockKeyhole, LogOut, Moon, Sun } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useTheme } from "../../../context/ThemeContext";
+import { useToast } from "../../../context/useToast";
 
 export default function VendorSettingsPage() {
   const { theme, toggle } = useTheme();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const selectTheme = (nextTheme: "dark" | "light") => {
     if (theme !== nextTheme) toggle();
@@ -58,6 +60,7 @@ export default function VendorSettingsPage() {
                 type="button"
                 onClick={() => {
                   logout();
+                  toast.info("Signed out", "Your Confam session has ended.");
                   navigate("/", { replace: true });
                 }}
                 className="btn-ghost min-h-11"

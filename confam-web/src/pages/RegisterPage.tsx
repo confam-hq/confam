@@ -61,10 +61,15 @@ export default function RegisterPage() {
     let active = true;
     authApi.banks()
       .then((result) => { if (active) setBanks(result); })
-      .catch(() => { if (active) setBanksErr(true); })
+      .catch(() => {
+        if (active) {
+          setBanksErr(true);
+          toast.error("Could not load banks", "You can retry the bank list.");
+        }
+      })
       .finally(() => { if (active) setBanksLoading(false); });
     return () => { active = false; };
-  }, [bankRequest]);
+  }, [bankRequest, toast]);
 
   const bankOptions = useMemo(() => banks.map((bank) => ({ value: bank.code, label: bank.name })), [banks]);
   const accountName = resolved?.account_number === f.account_number && resolved.bank_code === f.bank_code
@@ -81,7 +86,11 @@ export default function RegisterPage() {
           if (active) setResolved({ account_number: f.account_number, bank_code: f.bank_code, account_name: result.account_name });
         })
         .catch(() => {
-          if (active) setErr("Could not resolve this account. Check the number and bank.");
+          if (active) {
+            const message = "Could not resolve this account. Check the number and bank.";
+            setErr(message);
+            toast.error("Account could not be verified", message);
+          }
         })
         .finally(() => {
           if (active) setResolving(false);
@@ -91,7 +100,7 @@ export default function RegisterPage() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [f.account_number, f.bank_code, f.role]);
+  }, [f.account_number, f.bank_code, f.role, toast]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();

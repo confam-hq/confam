@@ -4,10 +4,12 @@ import { LogOut, Search } from "lucide-react";
 import ConfamLogo from "./ConfamLogo";
 import ThemeToggle from "./ThemeToggle";
 import { useAuth, homeFor } from "../../context/AuthContext";
+import { useToast } from "../../context/useToast";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const ref = useRef<HTMLInputElement>(null);
 
@@ -50,7 +52,11 @@ export default function Navbar() {
             <>
               <ThemeToggle />
               <button
-                onClick={() => { logout(); nav("/"); }}
+                onClick={() => {
+                  logout();
+                  toast.info("Signed out", "Your Confam session has ended.");
+                  nav("/", { replace: true });
+                }}
                 aria-label="Log out"
                 className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted hover:bg-surface-2 hover:text-ink"
               >
