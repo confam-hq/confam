@@ -13,6 +13,7 @@ type PaystackSetup = {
   ref: string;
   onSuccess: (transaction: { reference: string }) => void;
   onCancel: () => void;
+  onClose?: () => void;
 };
 
 type PaystackWindow = Window & {
@@ -64,19 +65,33 @@ export default function PaystackModal({
       const PaystackPop = (window as PaystackWindow).PaystackPop;
       if (!PaystackPop) throw new Error("Inline Paystack checkout could not be opened. Please try again.");
 
+      let cancelled = false;
+      let returned = false;
+      const reference = init.checkout.reference;
+      const returnToDeal = (paymentReference: string) => {
+        if (returned) return;
+        returned = true;
+        toast.success("Payment received", "Returning you to the deal confirmation.");
+        window.location.assign(`${callbackUrl}?reference=${encodeURIComponent(paymentReference)}`);
+      };
+
       const handler = PaystackPop.setup({
         key: init.checkout.public_key,
         email,
         amount: Math.round(buyerTotal * 100),
         ref: init.checkout.reference,
         onSuccess: (transaction: { reference: string }) => {
-          const reference = transaction.reference || init.checkout.reference || "";
-          toast.success("Payment received", "Returning you to the deal confirmation.");
-          window.location.assign(`${callbackUrl}?reference=${encodeURIComponent(reference)}`);
+          returnToDeal(transaction.reference || reference);
         },
         onCancel: () => {
+          cancelled = true;
           setBusy(false);
           toast.info("Checkout cancelled", "You can reopen the payment window when you are ready.");
+        },
+        onClose: () => {
+          if (!cancelled) {
+            window.setTimeout(() => returnToDeal(reference), 250);
+          }
         },
       });
       handler.openIframe();
