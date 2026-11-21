@@ -96,9 +96,9 @@ export default function RegisterPage() {
         .then((result) => {
           if (active) setResolved({ account_number: f.account_number, bank_code: f.bank_code, account_name: result.account_name });
         })
-        .catch(() => {
+        .catch((cause) => {
           if (active) {
-            const message = "Could not resolve this account. Check the number and bank.";
+            const message = errMsg(cause, "Could not resolve this account. Check the number and bank.");
             setErr(message);
             toast.error("Account could not be verified", message);
           }

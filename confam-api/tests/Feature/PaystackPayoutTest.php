@@ -5,6 +5,21 @@ use App\Services\Escrow\PaystackService;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
+test('test mode resolves bank accounts locally instead of making an unreliable live lookup', function () {
+    config([
+        'services.paystack.secret_key' => 'sk_test_example',
+        'services.paystack.base_url' => 'https://api.paystack.co',
+    ]);
+
+    $resolved = app(PaystackService::class)->resolveAccount('0123456789', '058');
+
+    expect($resolved)
+        ->account_number->toBe('0123456789')
+        ->account_name->toBe('CONFAM TEST VENDOR')
+        ->bank_code->toBe('058')
+        ->test_mode->toBeTrue();
+});
+
 test('a failed live Paystack transfer is surfaced instead of recorded as a payout', function () {
     config([
         'services.paystack.secret_key' => 'sk_live_test_key',

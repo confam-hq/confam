@@ -36,11 +36,16 @@ class PaystackService
 
     public function resolveAccount(string $accountNumber, string $bankCode): array
     {
-        if (blank($this->secretKey) || str_starts_with($this->secretKey, 'sk_test_your')) {
+        $isTestKey = blank($this->secretKey)
+            || str_starts_with($this->secretKey, 'sk_test_your')
+            || str_starts_with($this->secretKey, 'sk_test_');
+
+        if ($isTestKey) {
             return [
                 'account_number' => $accountNumber,
-                'account_name'   => 'CONFAM VERIFIED VENDOR (DEMO)',
+                'account_name'   => 'CONFAM TEST VENDOR',
                 'bank_code'      => $bankCode,
+                'test_mode'      => true,
             ];
         }
 
