@@ -11,8 +11,10 @@ import LiveProofRecorder from "../components/camera/LiveProofRecorder";
 import WaybillScannerCard from "../components/waybill/WaybillScannerCard";
 import PaystackModal from "../components/payment/PaystackModal";
 import LoadingScreen from "../components/feedback/LoadingScreen";
+import DriverLocationStatus from "../components/escrow/DriverLocationStatus";
 import StatusPage from "./StatusPage";
 import { formatNaira } from "../utils/formatNaira";
+import { useToast } from "../context/useToast";
 import type { Deal } from "../types/deal.types";
 
 export default function DealRoomPage() {
@@ -20,8 +22,12 @@ export default function DealRoomPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isVendor = user?.role === "vendor";
+  const toast = useToast();
   const verifiedPaymentReference = useRef<string | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
+  const ping = deal?.waybill?.last_ping;
+  const pingSignature = ping ? `${ping.at}:${ping.lat}:${ping.lng}` : null;
   const [err, setErr] = useState("");
   const [loadErrorCode, setLoadErrorCode] = useState<"404" | "500">("500");
   const [pay, setPay] = useState(false);
@@ -47,12 +53,46 @@ export default function DealRoomPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
+    if (!isVendor || deal?.status !== "in_transit") return;
+    let active = true;
+    let lastPing = pingSignature;
+    let pollErrorShown = false;
+    const interval = window.setInterval(async () => {
+      try {
+        const latest = await dealApi.get(code);
+        if (!active) return;
+        const ping = latest.waybill?.last_ping;
+        const nextPing = ping ? `${ping.at}:${ping.lat}:${ping.lng}` : null;
+        if (ping && nextPing && nextPing !== lastPing) {
+          toast.info(
+            "Driver location received",
+            `${latest.title} · ${ping.lat.toFixed(5)}, ${ping.lng.toFixed(5)}`,
+          );
+        }
+        lastPing = nextPing;
+        setDeal(latest);
+        pollErrorShown = false;
+      } catch (error) {
+        if (active && !pollErrorShown) {
+          toast.error("Could not refresh driver location", errMsg(error, "Check your connection and try again."));
+          pollErrorShown = true;
+        }
+      }
+    }, 15000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [code, deal?.status, isVendor, pingSignature, toast]);
+
+  useEffect(() => {
     const reference = new URLSearchParams(location.search).get("reference");
     if (!reference || verifiedPaymentReference.current === reference) return;
 
     verifiedPaymentReference.current = reference;
     dealApi.verifyPayment(code, reference)
       .then(() => {
+        toast.success("Payment confirmed", "Escrow has been funded successfully.");
         const query = new URLSearchParams(location.search);
         query.delete("reference");
         query.delete("trxref");
@@ -68,12 +108,11 @@ export default function DealRoomPage() {
         verifiedPaymentReference.current = null;
         setErr(errMsg(e, "Could not verify payment"));
       });
-  }, [code, load, location.pathname, location.search, navigate]);
+  }, [code, load, location.pathname, location.search, navigate, toast]);
 
   if (err && !deal) return <StatusPage code={loadErrorCode} detail={err} />;
   if (!deal) return <LoadingScreen label="Opening your protected deal" />;
 
-  const isVendor = user?.role === "vendor";
   const isBuyer = user?.role === "buyer"
     && user.email.toLowerCase() === deal.buyer_email?.toLowerCase();
   const buyerTotal = deal.total_payable ?? deal.amount + (deal.waybill_fee ?? 0);
@@ -83,8 +122,11 @@ export default function DealRoomPage() {
     try {
       setDeal(await dealApi.uploadProof(deal.code, blob.b, blob.hash, setProgress));
       setBlob(null);
+      toast.success("Proof uploaded", "Your packing video was saved and verified.");
     } catch (e) {
-      setErr(errMsg(e));
+      const message = errMsg(e);
+      setErr(message);
+      toast.error("Proof upload failed", message);
     } finally {
       setBusy(false);
     }
@@ -94,8 +136,15 @@ export default function DealRoomPage() {
     if (!window.confirm("Confirm that the goods and waybill arrived in good condition? This releases the vendor payout.")) return;
     setBusy(true);
     setErr("");
-    try { setDeal(await dealApi.confirmDelivery(deal.code)); }
-    catch (e) { setErr(errMsg(e, "Could not confirm delivery")); }
+    try {
+      setDeal(await dealApi.confirmDelivery(deal.code));
+      toast.success("Delivery confirmed", "The vendor payout has been released.");
+    }
+    catch (e) {
+      const message = errMsg(e, "Could not confirm delivery");
+      setErr(message);
+      toast.error("Could not confirm delivery", message);
+    }
     finally { setBusy(false); }
   };
 
@@ -108,8 +157,11 @@ export default function DealRoomPage() {
       setShowDispute(false);
       setDisputeReason("");
       setActionMessage("Dispute opened. Escrow remains frozen pending admin review.");
+      toast.success("Dispute opened", "Escrow remains frozen pending admin review.");
     } catch (e) {
-      setErr(errMsg(e, "Could not open a dispute"));
+      const message = errMsg(e, "Could not open a dispute");
+      setErr(message);
+      toast.error("Could not open dispute", message);
     } finally {
       setBusy(false);
     }
@@ -242,6 +294,7 @@ export default function DealRoomPage() {
                   Driver link: {window.location.origin}/ping/{deal.waybill.ping_token}
                 </p>
               )}
+              <DriverLocationStatus waybill={deal.waybill} />
             </div>
           )}
         </div>

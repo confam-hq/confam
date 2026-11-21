@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { KeyRound, Plus, Truck, Wallet } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { KeyRound, Plus, RefreshCw, Truck, Wallet } from "lucide-react";
 import { dealApi } from "../../../api/dealApi";
 import { errMsg } from "../../../api/client";
 import MetricCard from "../../../components/escrow/MetricCard";
@@ -8,6 +8,7 @@ import DealInspector from "../../../components/escrow/DealInspector";
 import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import CreateDealModal from "./CreateDealModal";
 import { formatNaira } from "../../../utils/formatNaira";
+import { useToast } from "../../../context/useToast";
 import type { Deal } from "../../../types/deal.types";
 
 export default function VendorDashboard() {
@@ -17,30 +18,64 @@ export default function VendorDashboard() {
   const [loadError, setLoadError] = useState("");
   const [modal, setModal] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const hasLoaded = useRef(false);
+  const manualRefresh = useRef(false);
+  const pingSignatures = useRef(new Map<string, string | null>());
+  const toast = useToast();
 
   useEffect(() => {
     let active = true;
-    dealApi
-      .list()
-      .then((d) => {
+    let requestInFlight = false;
+    const refresh = async () => {
+      if (requestInFlight) return;
+      requestInFlight = true;
+      try {
+        const latest = await dealApi.list("vendor");
         if (!active) return;
-        setDeals(d);
-        setSel(d[0] ?? null);
-      }).catch((e) => {
-        if (!active) return;
-        setDeals([]);
-        setSel(null);
-        setLoadError(errMsg(e, "Could not load your deals."));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, [reloadKey]);
+        latest.forEach((deal) => {
+          const ping = deal.waybill?.last_ping;
+          const signature = ping ? `${ping.at}:${ping.lat}:${ping.lng}` : null;
+          const previous = pingSignatures.current.get(deal.code);
+          if (hasLoaded.current && previous !== undefined && ping && signature !== previous) {
+            toast.info("Driver location received", `${deal.title} · ${ping.lat.toFixed(5)}, ${ping.lng.toFixed(5)}`);
+          }
+          pingSignatures.current.set(deal.code, signature);
+        });
+        hasLoaded.current = true;
+        setDeals(latest);
+        setSel((current) => current
+          ? latest.find((deal) => deal.code === current.code) ?? latest[0] ?? null
+          : latest[0] ?? null);
+        setLoadError("");
+      } catch (error) {
+        if (active) {
+          const message = errMsg(error, "Could not load your deals.");
+          if (!hasLoaded.current) setLoadError(message);
+          if (manualRefresh.current) toast.error("Could not refresh deals", message);
+        }
+      } finally {
+        requestInFlight = false;
+        if (active) {
+          manualRefresh.current = false;
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    };
+    void refresh();
+    const interval = window.setInterval(() => { void refresh(); }, 15000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [reloadKey, toast]);
 
   const retryLoadDeals = () => {
     setLoading(true);
     setLoadError("");
+    setRefreshing(true);
+    manualRefresh.current = true;
     setReloadKey((key) => key + 1);
   };
 
@@ -62,7 +97,13 @@ export default function VendorDashboard() {
     <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Dashboard</h1>
-        <button onClick={() => setModal(true)} className="btn-primary"><Plus size={14} /> New deal</button>
+        <div className="flex gap-2">
+          <button onClick={retryLoadDeals} disabled={refreshing} className="btn-ghost min-h-11 px-3" aria-label="Refresh deals">
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">{refreshing ? "Refreshing…" : "Refresh"}</span>
+          </button>
+          <button onClick={() => setModal(true)} className="btn-primary"><Plus size={14} /> New deal</button>
+        </div>
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

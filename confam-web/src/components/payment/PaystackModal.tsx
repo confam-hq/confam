@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, LockKeyhole, ShieldCheck, X } from "lucide-react";
 import { dealApi } from "../../api/dealApi";
 import { errMsg } from "../../api/client";
+import { useToast } from "../../context/useToast";
 import { formatNaira } from "../../utils/formatNaira";
 import type { Deal } from "../../types/deal.types";
 
@@ -30,6 +31,7 @@ export default function PaystackModal({
   const [email, setEmail] = useState(deal.buyer_email ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const toast = useToast();
   const buyerTotal = deal.total_payable ?? deal.amount + (deal.waybill_fee ?? 0);
 
   const loadPaystackInline = () =>
@@ -70,13 +72,22 @@ export default function PaystackModal({
         onSuccess: (transaction: { reference: string }) => {
           dealApi.verifyPayment(deal.code, transaction.reference || init.checkout.reference || "")
             .then(() => window.location.assign(`${callbackUrl}?reference=${encodeURIComponent(transaction.reference || init.checkout.reference || "")}`))
-            .catch((e) => setErr(errMsg(e, "Payment could not be verified")));
+            .catch((e) => {
+              const message = errMsg(e, "Payment could not be verified");
+              setErr(message);
+              toast.error("Payment could not be verified", message);
+            });
         },
-        onCancel: () => setBusy(false),
+        onCancel: () => {
+          setBusy(false);
+          toast.info("Checkout cancelled", "You can reopen the payment window when you are ready.");
+        },
       });
       handler.openIframe();
     } catch (e) {
-      setErr(errMsg(e, "Payment failed to start"));
+      const message = errMsg(e, "Payment failed to start");
+      setErr(message);
+      toast.error("Payment failed to start", message);
       setBusy(false);
     }
   };

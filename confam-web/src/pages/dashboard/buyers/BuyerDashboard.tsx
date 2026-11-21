@@ -7,6 +7,7 @@ import DealTable from "../../../components/escrow/DealTable";
 import DealInspector from "../../../components/escrow/DealInspector";
 import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import { formatNaira } from "../../../utils/formatNaira";
+import { useToast } from "../../../context/useToast";
 import type { Deal } from "../../../types/deal.types";
 
 export default function BuyerDashboard() {
@@ -20,6 +21,7 @@ export default function BuyerDashboard() {
   const [showDispute, setShowDispute] = useState(false);
   const [reason, setReason] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const toast = useToast();
 
   useEffect(() => {
     let active = true;
@@ -60,8 +62,11 @@ export default function BuyerDashboard() {
     try {
       updateDeal(await dealApi.confirmDelivery(sel.code));
       setMessage("Delivery confirmed. The vendor payout has been released.");
+      toast.success("Delivery confirmed", "The vendor payout has been released.");
     } catch (error) {
-      setActionError(errMsg(error, "Could not confirm delivery."));
+      const message = errMsg(error, "Could not confirm delivery.");
+      setActionError(message);
+      toast.error("Could not confirm delivery", message);
     } finally {
       setBusy(false);
     }
@@ -77,8 +82,11 @@ export default function BuyerDashboard() {
       updateDeal(await dealApi.dispute(sel.code, reason.trim()));
       setReason("");
       setMessage("Your dispute is open. The escrow will remain frozen while Confam reviews it.");
+      toast.success("Dispute submitted", "Escrow remains frozen while Confam reviews your case.");
     } catch (error) {
-      setActionError(errMsg(error, "Could not open the dispute."));
+      const message = errMsg(error, "Could not open the dispute.");
+      setActionError(message);
+      toast.error("Could not submit dispute", message);
     } finally {
       setBusy(false);
     }

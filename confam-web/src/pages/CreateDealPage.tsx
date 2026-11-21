@@ -2,19 +2,26 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Copy, MessageCircle } from "lucide-react";
 import { formatNaira } from "../utils/formatNaira";
+import { useToast } from "../context/useToast";
 import type { Deal } from "../types/deal.types";
 import CreateDealForm from "./dashboard/vendor/CreateDealForm";
 
 export default function CreateDealPage() {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
 
   const link = deal ? `${window.location.origin}/deal/${deal.code}` : "";
 
   const copy = async () => {
-    await navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      toast.success("Link copied", "Share the escrow link with your buyer.");
+      setTimeout(() => setCopied(false), 1500);
+    } catch (error) {
+      toast.error("Could not copy link", error instanceof Error ? error.message : "Copy the link manually.");
+    }
   };
 
   if (deal)

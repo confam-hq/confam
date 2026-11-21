@@ -6,12 +6,14 @@ import type { VendorProfilePayload } from "../../../api/dealApi";
 import { errMsg } from "../../../api/client";
 import Select from "../../../components/ui/Select";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../context/useToast";
 import type { Bank } from "../../../types/deal.types";
 
 type ProfileForm = VendorProfilePayload;
 
 export default function VendorProfilePage() {
   const { user, updateProfile } = useAuth();
+  const toast = useToast();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [banksLoading, setBanksLoading] = useState(true);
   const [bankLoadError, setBankLoadError] = useState("");
@@ -70,8 +72,11 @@ export default function VendorProfilePage() {
         account_number: updated.account_number ?? "",
       });
       setSaved(true);
+      toast.success("Profile saved", "Your verified payout details will be used for new deals.");
     } catch (cause) {
-      setError(errMsg(cause, "Could not save your profile."));
+      const message = errMsg(cause, "Could not save your profile.");
+      setError(message);
+      toast.error("Could not save profile", message);
     } finally {
       setBusy(false);
     }

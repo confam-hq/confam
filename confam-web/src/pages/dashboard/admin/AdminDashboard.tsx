@@ -7,6 +7,7 @@ import DealTable from "../../../components/escrow/DealTable";
 import DealInspector from "../../../components/escrow/DealInspector";
 import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import { formatNaira } from "../../../utils/formatNaira";
+import { useToast } from "../../../context/useToast";
 import type { Deal } from "../../../types/deal.types";
 
 export default function AdminDashboard() {
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const toast = useToast();
 
   const load = () =>
     adminApi.disputes().then((d) => { setDisputes(d); setSel((s) => d.find((x) => x.code === s?.code) ?? d[0] ?? null); });
@@ -33,8 +35,16 @@ export default function AdminDashboard() {
     if (!window.confirm(`Resolve ${sel.code} and ${action}? This action cannot be undone.`)) return;
     setBusy(true);
     setErr("");
-    try { await adminApi.resolve(sel.code, outcome); await load(); }
-    catch (e) { setErr(errMsg(e, "Could not resolve this dispute.")); }
+    try {
+      await adminApi.resolve(sel.code, outcome);
+      await load();
+      toast.success("Dispute resolved", `Funds were ${outcome === "refund" ? "refunded to the buyer" : "released to the vendor"}.`);
+    }
+    catch (e) {
+      const message = errMsg(e, "Could not resolve this dispute.");
+      setErr(message);
+      toast.error("Could not resolve dispute", message);
+    }
     finally { setBusy(false); }
   };
 

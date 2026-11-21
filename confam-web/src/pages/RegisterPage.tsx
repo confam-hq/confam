@@ -6,6 +6,7 @@ import { authApi } from "../api/dealApi";
 import { errMsg } from "../api/client";
 import AuthSplitLayout from "../components/auth/AuthSplitLayout";
 import Select from "../components/ui/Select";
+import { useToast } from "../context/useToast";
 import type { Bank } from "../types/deal.types";
 
 type AccountRole = "buyer" | "vendor";
@@ -41,6 +42,7 @@ export default function RegisterPage() {
   const [resolving, setResolving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const toast = useToast();
 
   const set = (key: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setF((previous) => ({ ...previous, [key]: event.target.value }));
@@ -103,9 +105,12 @@ export default function RegisterPage() {
         ...f,
         account_name: f.role === "vendor" ? accountName : "",
       });
+      toast.success("Account created", "Welcome to Confam.");
       nav(homeFor(user.role), { replace: true });
     } catch (error) {
-      setErr(errMsg(error));
+      const message = errMsg(error);
+      setErr(message);
+      toast.error("Account could not be created", message);
     } finally {
       setBusy(false);
     }

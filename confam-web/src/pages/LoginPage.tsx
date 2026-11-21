@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, homeFor } from "../context/AuthContext";
 import { errMsg } from "../api/client";
 import AuthSplitLayout from "../components/auth/AuthSplitLayout";
+import { useToast } from "../context/useToast";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const toast = useToast();
 
   const go = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -19,10 +21,13 @@ export default function LoginPage() {
     setErr("");
     try {
       const user = await login(email, password);
+      toast.success("Signed in", "Your Confam workspace is ready.");
       const destination = (loc.state as { from?: string } | null)?.from;
       nav(destination || homeFor(user.role), { replace: true });
     } catch (error) {
-      setErr(errMsg(error, "Invalid email or password."));
+      const message = errMsg(error, "Invalid email or password.");
+      setErr(message);
+      toast.error("Sign-in failed", message);
     } finally {
       setBusy(false);
     }

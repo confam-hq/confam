@@ -3,9 +3,11 @@ import { AlertTriangle, ExternalLink, MapPin, ShieldCheck, Video } from "lucide-
 import { Link } from "react-router-dom";
 import StatusPill from "./StatusPill";
 import LedgerTimeline from "./LedgerTimeline";
+import DriverLocationStatus from "./DriverLocationStatus";
 import { formatNaira } from "../../utils/formatNaira";
 import { dealApi } from "../../api/dealApi";
 import { errMsg } from "../../api/client";
+import { useToast } from "../../context/useToast";
 import type { Deal } from "../../types/deal.types";
 
 export default function DealInspector({
@@ -19,6 +21,7 @@ export default function DealInspector({
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const toast = useToast();
 
   if (!deal) {
     return (
@@ -40,8 +43,11 @@ export default function DealInspector({
     setErr("");
     try {
       onUpdated?.(await dealApi.dispute(deal.code, "Buyer has not confirmed receipt and condition after dispatch."));
+      toast.success("Dispute submitted", "Escrow remains frozen while an admin reviews the case.");
     } catch (e) {
-      setErr(errMsg(e, "Could not request an admin review."));
+      const message = errMsg(e, "Could not request an admin review.");
+      setErr(message);
+      toast.error("Could not submit dispute", message);
     } finally {
       setBusy(false);
     }
@@ -106,6 +112,7 @@ export default function DealInspector({
           <p className="text-xs text-muted">
             {[deal.waybill.park, deal.waybill.plate, deal.waybill.driver_name].filter(Boolean).join(" • ")}
           </p>
+          <DriverLocationStatus waybill={deal.waybill} />
         </div>
       )}
 

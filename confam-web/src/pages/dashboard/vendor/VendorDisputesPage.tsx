@@ -3,6 +3,7 @@ import { AlertTriangle, ExternalLink, ShieldAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { dealApi } from "../../../api/dealApi";
 import { errMsg } from "../../../api/client";
+import { useToast } from "../../../context/useToast";
 import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import StatusPill from "../../../components/escrow/StatusPill";
 import { formatNaira } from "../../../utils/formatNaira";
@@ -19,6 +20,7 @@ export default function VendorDisputesPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const toast = useToast();
 
   useEffect(() => {
     let active = true;
@@ -49,8 +51,11 @@ export default function VendorDisputesPage() {
       setSelectedCode(eligibleDeals.find((deal) => deal.code !== updated.code)?.code ?? "");
       setReason("");
       setNotice(`Dispute submitted for ${updated.code}. Funds remain frozen while the case is reviewed.`);
+      toast.success("Dispute submitted", `Funds for ${updated.code} remain frozen during review.`);
     } catch (cause) {
-      setError(errMsg(cause, "Could not submit the dispute."));
+      const message = errMsg(cause, "Could not submit the dispute.");
+      setError(message);
+      toast.error("Could not submit dispute", message);
     } finally {
       setBusy(false);
     }

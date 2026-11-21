@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ScanLine } from "lucide-react";
 import { dealApi } from "../../api/dealApi";
 import { errMsg } from "../../api/client";
+import { useToast } from "../../context/useToast";
 import type { Deal } from "../../types/deal.types";
 
 type WaybillFields = {
@@ -41,6 +42,7 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
     ai_summary_note: "",
   });
   const [validReceipt, setValidReceipt] = useState<boolean | null>(null);
+  const toast = useToast();
 
   const pick = async (f?: File | null) => {
     if (!f) return;
@@ -72,8 +74,11 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
         ai_summary_note: result.ai_summary_note ?? "Review and correct the extracted details before dispatch.",
       });
       setValidReceipt(result.is_valid_receipt ?? false);
+      toast.info("Waybill scanned", "Review the extracted details before dispatching.");
     } catch (e) {
-      setErr(errMsg(e, "Could not read waybill"));
+      const message = errMsg(e, "Could not read waybill");
+      setErr(message);
+      toast.info("Manual entry is available", message);
       setValidReceipt(false);
       setFields((current) => ({
         ...current,
@@ -88,7 +93,9 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
     event.preventDefault();
     const requiredFields = ["transport_company", "driver_phone", "destination_park"] as const;
     if (requiredFields.some((key) => !fields[key].trim())) {
-      setErr("Add the transport company, driver phone, and destination before dispatching.");
+      const message = "Add the transport company, driver phone, and destination before dispatching.";
+      setErr(message);
+      toast.error("Waybill details are incomplete", message);
       return;
     }
 
@@ -102,8 +109,11 @@ export default function WaybillScannerCard({ code, onDone }: { code: string; onD
         destination_park: fields.destination_park.trim(),
         receipt_image: receipt,
       }));
+      toast.success("Deal dispatched", "Waybill details were saved and the buyer can track delivery.");
     } catch (e) {
-      setErr(errMsg(e, "Could not save waybill and dispatch deal."));
+      const message = errMsg(e, "Could not save waybill and dispatch deal.");
+      setErr(message);
+      toast.error("Could not dispatch deal", message);
     } finally {
       setDispatching(false);
     }

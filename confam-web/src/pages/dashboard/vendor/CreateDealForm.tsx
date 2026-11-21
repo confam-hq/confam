@@ -3,6 +3,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { errMsg } from "../../../api/client";
 import { dealApi } from "../../../api/dealApi";
 import { formatNaira } from "../../../utils/formatNaira";
+import { useToast } from "../../../context/useToast";
 import type { CreateDealPayload, Deal, DeliveryMode } from "../../../types/deal.types";
 
 type FormValues = {
@@ -38,13 +39,16 @@ export default function CreateDealForm({
   const [form, setForm] = useState(initialForm);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const toast = useToast();
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setErr("");
 
     if (!user?.phone || !user.bank_code || !user.account_number || !user.account_name) {
-      setErr("Your account is missing payout details. Update your bank details before creating a deal.");
+      const message = "Your account is missing payout details. Update your bank details before creating a deal.";
+      setErr(message);
+      toast.error("Payout details needed", message);
       return;
     }
 
@@ -69,8 +73,11 @@ export default function CreateDealForm({
 
     try {
       onCreated(await dealApi.create(payload));
+      toast.success("Deal created", "Your escrow link is ready to share with the buyer.");
     } catch (error) {
-      setErr(errMsg(error));
+      const message = errMsg(error);
+      setErr(message);
+      toast.error("Could not create deal", message);
     } finally {
       setBusy(false);
     }

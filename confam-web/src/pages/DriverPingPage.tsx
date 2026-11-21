@@ -4,27 +4,42 @@ import { CheckCircle2, MapPin } from "lucide-react";
 import { driverApi } from "../api/dealApi";
 import { errMsg } from "../api/client";
 import ConfamLogo from "../components/layout/ConfamLogo";
+import { useToast } from "../context/useToast";
 
 export default function DriverPingPage() {
   const { token = "" } = useParams();
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [err, setErr] = useState("");
+  const toast = useToast();
 
   const ping = () => {
     setErr("");
-    if (!navigator.geolocation) return setErr("GPS not supported on this phone");
+    if (!navigator.geolocation) {
+      const message = "GPS not supported on this phone";
+      setErr(message);
+      toast.error("Location unavailable", message);
+      return;
+    }
     setState("busy");
     navigator.geolocation.getCurrentPosition(
       async (p) => {
         try {
           await driverApi.ping(token, p.coords.latitude, p.coords.longitude);
           setState("done");
+          toast.success("Location sent", "The vendor and buyer can now see your check-in.");
         } catch (e) {
-          setErr(errMsg(e));
+          const message = errMsg(e, "Could not send your location.");
+          setErr(message);
+          toast.error("Driver check-in failed", message);
           setState("idle");
         }
       },
-      () => { setErr("Please allow location access"); setState("idle"); },
+      () => {
+        const message = "Please allow location access";
+        setErr(message);
+        toast.error("Location permission needed", message);
+        setState("idle");
+      },
       { enableHighAccuracy: true, timeout: 15000 }
     );
   };
