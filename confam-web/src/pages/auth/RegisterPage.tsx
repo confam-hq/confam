@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, RefreshCw, ShoppingBag, Store } from "lucide-react";
+import { Camera, CheckCircle2, RefreshCw, ShoppingBag, Store } from "lucide-react";
 import { useAuth } from "../../context/useAuth";
 import { authApi } from "../../api/dealApi";
 import { errMsg } from "../../api/client";
@@ -21,6 +21,7 @@ type FormValues = {
   account_number: string;
   terms_accepted: boolean;
   privacy_accepted: boolean;
+  avatar: File | null;
 };
 
 const initialForm: FormValues = {
@@ -33,6 +34,7 @@ const initialForm: FormValues = {
   account_number: "",
   terms_accepted: false,
   privacy_accepted: false,
+  avatar: null,
 };
 
 export default function RegisterPage() {
@@ -48,13 +50,17 @@ export default function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const toast = useToast();
+  const avatarPreview = useMemo(
+    () => f.avatar ? URL.createObjectURL(f.avatar) : null,
+    [f.avatar],
+  );
 
-  const set = (key: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => () => {
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
+
+  const set = (key: "name" | "email" | "phone" | "password") => (event: React.ChangeEvent<HTMLInputElement>) => {
     setF((previous) => ({ ...previous, [key]: event.target.value }));
-    if (key === "account_number") {
-      setResolved(null);
-      setResolving(false);
-    }
   };
 
   const loadBanks = useCallback(() => {
@@ -175,6 +181,33 @@ export default function RegisterPage() {
         <div>
           <label htmlFor="register-name" className="label">Full name</label>
           <input id="register-name" autoComplete="name" required maxLength={120} className="input neo-inset" value={f.name} onChange={set("name")} />
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-surface-2 text-lg font-semibold text-muted">
+            {avatarPreview
+              ? <img src={avatarPreview} alt="Avatar preview" className="size-full object-cover" />
+              : f.name.trim().charAt(0).toUpperCase() || <Camera size={20} />}
+          </div>
+          <div>
+            <label htmlFor="register-avatar" className="label">Profile photo <span className="font-normal text-muted">(optional)</span></label>
+            <input
+              id="register-avatar"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="block w-full text-xs text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-ink"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                if (file && file.size > 5 * 1024 * 1024) {
+                  setErr("Choose an avatar smaller than 5 MB.");
+                  event.target.value = "";
+                  return;
+                }
+                setF((previous) => ({ ...previous, avatar: file }));
+                setErr("");
+              }}
+            />
+            <p className="mt-1 text-xs text-muted">JPEG, PNG, or WebP up to 5 MB.</p>
+          </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

@@ -12,6 +12,7 @@ export interface User {
   bank_name?: string | null;
   account_number?: string | null;
   account_name?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface LedgerEvent {

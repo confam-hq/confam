@@ -8,6 +8,7 @@ import DealInspector from "../../../components/escrow/DealInspector";
 import LoadingScreen from "../../../components/feedback/LoadingScreen";
 import { formatNaira } from "../../../utils/formatNaira";
 import { useToast } from "../../../context/useToast";
+import DatabaseResetPanel from "../../../components/admin/DatabaseResetPanel";
 import type { Deal } from "../../../types/deal.types";
 
 export default function AdminDashboard() {
@@ -79,6 +80,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      <DatabaseResetPanel />
     </div>
   );
 }

@@ -73,6 +73,7 @@ export interface VendorProfilePayload {
   bank_code: string;
   bank_name: string;
   account_number: string;
+  avatar?: File | null;
 }
 
 export interface AuthSession {
@@ -146,12 +147,25 @@ const mapApiDeal = (deal: ApiDealResponse["deal"]): Deal => {
   };
 };
 
+const mapAuthUser = (user: User): User => ({
+  ...user,
+  avatar_url: resolveMediaUrl(user.avatar_url),
+});
+
 // NOTE: adjust the paths below if your Laravel routes differ.
 export const authApi = {
   login: (email: string, password: string) =>
-    api.post<{ token: string; user: User }>("/auth/login", { email, password }).then((r) => r.data),
-  register: (payload: Record<string, unknown>) =>
-    api.post<{ message: string; email: string }>("/auth/register", payload).then((r) => r.data),
+    api.post<{ token: string; user: User }>("/auth/login", { email, password })
+      .then((r) => ({ ...r.data, user: mapAuthUser(r.data.user) })),
+  register: (payload: Record<string, unknown>) => {
+    const form = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value instanceof File) form.append(key, value);
+      else if (value !== null && value !== undefined) form.append(key, String(value));
+    });
+    return api.post<{ message: string; email: string }>("/auth/register", form)
+      .then((r) => r.data);
+  },
   verifyEmail: (email: string, code: string) =>
     api.post<{ message: string }>("/auth/verification/verify", { email, code }).then((r) => r.data),
   resendVerification: (email: string) =>
@@ -164,10 +178,20 @@ export const authApi = {
     api.get<{ current_token_id: number | null; sessions: AuthSession[] }>("/auth/sessions").then((r) => r.data),
   revokeSession: (id: number) =>
     api.delete<{ message: string; current: boolean }>(`/auth/sessions/${id}`).then((r) => r.data),
+  unlock: (password: string) =>
+    api.post<{ message: string }>("/auth/unlock", { password }).then((r) => r.data),
   logout: () => api.post<{ message: string }>("/auth/logout").then((r) => r.data),
-  me: () => api.get<{ user: User }>("/vendor/me").then((r) => r.data.user),
-  updateProfile: (payload: VendorProfilePayload) =>
-    api.patch<{ user: User }>("/vendor/profile", payload).then((r) => r.data.user),
+  me: () => api.get<{ user: User }>("/vendor/me").then((r) => mapAuthUser(r.data.user)),
+  updateProfile: (payload: VendorProfilePayload) => {
+    const form = new FormData();
+    form.append("_method", "PATCH");
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value instanceof File) form.append(key, value);
+      else if (value !== null && value !== undefined) form.append(key, String(value));
+    });
+    return api.post<{ user: User }>("/vendor/profile", form)
+      .then((r) => mapAuthUser(r.data.user));
+  },
   banks: () =>
     api.get<unknown>("/banks").then((r) => {
       const payload = r.data;
@@ -301,7 +325,18 @@ export const adminApi = {
       .then((r) => r.data.data.map(mapApiDeal)),
   revenue: () =>
     api.get<{ total: number; fees: number; settled: number }>("/admin/revenue").then((r) => r.data),
+  databaseResetStatus: () =>
+    api.get<{ enabled: boolean; driver: string }>("/admin/database/reset-status").then((r) => r.data),
   resolve: (code: string, outcome: "release" | "refund") =>
     api.post<ApiDealResponse>(`/admin/disputes/${code}/resolve`, { outcome })
       .then((r) => mapApiDeal(r.data.deal)),
+  resetDatabase: (password: string, confirmation: string) =>
+    api.post<{
+      message: string;
+      backup_file: string;
+      deleted: { deals: number; accounts: number };
+    }>("/admin/database/reset", { password, confirmation }).then((r) => r.data),
+  downloadDatabaseBackup: (fileName: string) =>
+    api.get<Blob>(`/admin/database/backups/${encodeURIComponent(fileName)}`, { responseType: "blob" })
+      .then((r) => r.data),
 };

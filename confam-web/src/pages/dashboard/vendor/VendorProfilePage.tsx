@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, RefreshCw, ShieldCheck } from "lucide-react";
+import { Camera, CheckCircle2, RefreshCw, ShieldCheck } from "lucide-react";
 import { authApi } from "../../../api/dealApi";
 import type { VendorProfilePayload } from "../../../api/dealApi";
 import { errMsg } from "../../../api/client";
@@ -28,6 +28,15 @@ export default function VendorProfilePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const avatarPreview = useMemo(
+    () => avatar ? URL.createObjectURL(avatar) : null,
+    [avatar],
+  );
+
+  useEffect(() => () => {
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
 
   useEffect(() => {
     let active = true;
@@ -69,7 +78,7 @@ export default function VendorProfilePage() {
     setError("");
     setSaved(false);
     try {
-      const updated = await updateProfile({ ...form, bank_name: selectedBank.label });
+      const updated = await updateProfile({ ...form, bank_name: selectedBank.label, avatar });
       setForm({
         name: updated.name,
         phone: updated.phone ?? "",
@@ -102,6 +111,34 @@ export default function VendorProfilePage() {
       </div>
 
       <form onSubmit={submit} className="neo-card space-y-5 rounded-2xl p-5 sm:p-6">
+        <div className="flex items-center gap-4">
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-surface-2 text-lg font-semibold text-muted">
+            {(avatarPreview || user?.avatar_url)
+              ? <img src={avatarPreview ?? user?.avatar_url ?? undefined} alt="Profile avatar" className="size-full object-cover" />
+              : user?.name.trim().charAt(0).toUpperCase() || <Camera size={20} />}
+          </div>
+          <div>
+            <label htmlFor="profile-avatar" className="label">Profile photo <span className="font-normal text-muted">(optional)</span></label>
+            <input
+              id="profile-avatar"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="block w-full text-xs text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-ink"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                if (file && file.size > 5 * 1024 * 1024) {
+                  setError("Choose an avatar smaller than 5 MB.");
+                  event.target.value = "";
+                  return;
+                }
+                setAvatar(file);
+                setError("");
+                setSaved(false);
+              }}
+            />
+            <p className="mt-1 text-xs text-muted">JPEG, PNG, or WebP up to 5 MB.</p>
+          </div>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="profile-name" className="label">Full name</label>
