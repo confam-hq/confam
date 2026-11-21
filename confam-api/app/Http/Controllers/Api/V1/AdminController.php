@@ -47,6 +47,40 @@ class AdminController extends Controller
         ]);
     }
 
+    public function overview(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $dealStatuses = [
+            'awaiting_payment' => EscrowStatus::AWAITING_PAYMENT->value,
+            'escrow_locked' => EscrowStatus::FUNDED_LOCKED->value,
+            'in_transit' => EscrowStatus::DISPATCHED_IN_TRANSIT->value,
+            'settled' => EscrowStatus::COMPLETED_RELEASED->value,
+            'disputed' => EscrowStatus::DISPUTE_FROZEN->value,
+            'refunded' => EscrowStatus::REFUNDED->value,
+        ];
+
+        $statusCounts = [];
+        foreach ($dealStatuses as $key => $status) {
+            $statusCounts[$key] = Deal::where('status', $status)->count();
+        }
+
+        return response()->json([
+            'users' => [
+                'total' => User::count(),
+                'admins' => User::where('role', 'admin')->count(),
+                'vendors' => User::where('role', 'vendor')->count(),
+                'buyers' => User::where('role', 'buyer')->count(),
+                'verified' => User::whereNotNull('email_verified_at')->count(),
+                'unverified' => User::whereNull('email_verified_at')->count(),
+            ],
+            'deals' => [
+                'total' => Deal::count(),
+                'statuses' => $statusCounts,
+            ],
+        ]);
+    }
+
     public function dormantUsers(Request $request): JsonResponse
     {
         $this->authorizeAdmin($request);

@@ -6,10 +6,12 @@ import {
   Plus,
   Settings2,
   ShieldAlert,
+  Database,
+  Users,
   UserRound,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 import { homeFor } from "../../context/authRoutes";
 import { useToast } from "../../context/useToast";
@@ -19,17 +21,25 @@ import ThemeToggle from "./ThemeToggle";
 export default function DashboardShell({ children }: { children?: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
 
   if (!user) return null;
 
   const roleLabel = user.role.charAt(0).toUpperCase() + user.role.slice(1);
   const items = [
-    {
-      to: homeFor(user.role),
-      label: user.role === "buyer" ? "Purchases" : user.role === "admin" ? "Disputes" : "Overview",
-      icon: LayoutDashboard,
-    },
+    ...(user.role === "admin"
+      ? [
+          { to: "/dashboard/admin?section=overview", label: "Overview", icon: ChartNoAxesColumnIncreasing },
+          { to: "/dashboard/admin?section=disputes", label: "Disputes", icon: ShieldAlert },
+          { to: "/dashboard/admin?section=accounts", label: "Accounts", icon: Users },
+          { to: "/dashboard/admin?section=control", label: "Control", icon: Database },
+        ]
+      : [{
+          to: homeFor(user.role),
+          label: user.role === "buyer" ? "Purchases" : "Overview",
+          icon: LayoutDashboard,
+        }]),
     ...(user.role === "vendor"
       ? [
           { to: "/dashboard/vendor/analytics", label: "Analytics", icon: ChartNoAxesColumnIncreasing },
@@ -86,11 +96,17 @@ export default function DashboardShell({ children }: { children?: ReactNode }) {
                 key={to}
                 to={to}
                 end
-                className={({ isActive }) =>
-                  `flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                    isActive ? "neo-inset text-emerald-700 dark:text-emerald-300" : "text-muted hover:bg-surface-2 hover:text-ink"
-                  }`
-                }
+                className={({ isActive }) => {
+                  const adminTarget = to.includes("?section=")
+                    ? to.slice(to.indexOf("?"))
+                    : "";
+                  const active = adminTarget
+                    ? location.pathname === "/dashboard/admin" && (location.search || "?section=overview") === adminTarget
+                    : isActive;
+                  return `flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                    active ? "neo-inset text-emerald-700 dark:text-emerald-300" : "text-muted hover:bg-surface-2 hover:text-ink"
+                  }`;
+                }}
               >
                 <Icon size={16} />
                 {label}

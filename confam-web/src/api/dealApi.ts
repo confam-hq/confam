@@ -320,6 +320,11 @@ export const driverApi = {
 };
 
 export const adminApi = {
+  overview: () =>
+    api.get<{
+      users: { total: number; admins: number; vendors: number; buyers: number; verified: number; unverified: number };
+      deals: { total: number; statuses: Record<string, number> };
+    }>("/admin/overview").then((r) => r.data),
   dormantUsers: () =>
     api.get<{ data: Array<{ id: number; name: string; email: string; phone: string; role: string; created_at: string }> }>("/admin/users/dormant")
       .then((r) => r.data.data),
