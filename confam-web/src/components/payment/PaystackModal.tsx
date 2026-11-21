@@ -70,13 +70,9 @@ export default function PaystackModal({
         amount: Math.round(buyerTotal * 100),
         ref: init.checkout.reference,
         onSuccess: (transaction: { reference: string }) => {
-          dealApi.verifyPayment(deal.code, transaction.reference || init.checkout.reference || "")
-            .then(() => window.location.assign(`${callbackUrl}?reference=${encodeURIComponent(transaction.reference || init.checkout.reference || "")}`))
-            .catch((e) => {
-              const message = errMsg(e, "Payment could not be verified");
-              setErr(message);
-              toast.error("Payment could not be verified", message);
-            });
+          const reference = transaction.reference || init.checkout.reference || "";
+          toast.success("Payment received", "Returning you to the deal confirmation.");
+          window.location.assign(`${callbackUrl}?reference=${encodeURIComponent(reference)}`);
         },
         onCancel: () => {
           setBusy(false);

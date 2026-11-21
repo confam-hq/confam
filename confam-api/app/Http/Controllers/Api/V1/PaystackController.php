@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\DealResource;
 use App\Models\Deal;
 use App\Services\Escrow\EscrowStateMachine;
 use App\Services\Escrow\PaystackService;
+use App\Enums\EscrowStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -49,7 +50,9 @@ class PaystackController extends Controller
         $deal = Deal::where('short_code', strtoupper($short_code))->firstOrFail();
         $reference = (string) $request->input('reference', $deal->paystack_reference);
 
-        $this->paystackService->verifyTransaction($reference);
+        if ($deal->status === EscrowStatus::AWAITING_PAYMENT) {
+            $this->paystackService->verifyTransaction($reference);
+        }
         $result = $this->stateMachine->markAsFunded($deal, $reference);
 
         return response()->json([

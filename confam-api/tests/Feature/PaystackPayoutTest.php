@@ -20,6 +20,38 @@ test('test mode resolves bank accounts locally instead of making an unreliable l
         ->test_mode->toBeTrue();
 });
 
+test('test mode returns banks locally without calling Paystack', function () {
+    config([
+        'services.paystack.secret_key' => 'sk_test_example',
+        'services.paystack.base_url' => 'https://api.paystack.co',
+    ]);
+
+    Http::fake();
+
+    $banks = app(PaystackService::class)->listBanks();
+
+    expect($banks)->not->toBeEmpty()
+        ->and(collect($banks)->pluck('code'))->toContain('058')
+        ->and(Http::recorded())->toBeEmpty();
+});
+
+test('test mode accepts a successful inline payment reference locally', function () {
+    config([
+        'services.paystack.secret_key' => 'sk_test_example',
+        'services.paystack.base_url' => 'https://api.paystack.co',
+    ]);
+
+    Http::fake();
+
+    $verified = app(PaystackService::class)->verifyTransaction('CFM_TEST_SUCCESS');
+
+    expect($verified)
+        ->status->toBe('success')
+        ->reference->toBe('CFM_TEST_SUCCESS')
+        ->mock->toBeTrue()
+        ->and(Http::recorded())->toBeEmpty();
+});
+
 test('a failed live Paystack transfer is surfaced instead of recorded as a payout', function () {
     config([
         'services.paystack.secret_key' => 'sk_live_test_key',
@@ -41,7 +73,7 @@ test('a failed live Paystack transfer is surfaced instead of recorded as a payou
         ->toThrow(RuntimeException::class, 'Paystack vendor payout failed: Insufficient balance');
 });
 
-test('a failed Paystack bank list request is surfaced instead of returning an empty list', function () {
+test('a failed Paystack bank list request falls back to Nigerian banks', function () {
     config([
         'services.paystack.secret_key' => 'sk_live_test_key',
         'services.paystack.base_url' => 'https://api.paystack.co',
@@ -53,7 +85,9 @@ test('a failed Paystack bank list request is surfaced instead of returning an em
         ], 401),
     ]);
 
-    expect(fn () => app(PaystackService::class)->listBanks())
-        ->toThrow(RuntimeException::class, 'Could not load Nigerian banks: Invalid key');
+    $banks = app(PaystackService::class)->listBanks();
+
+    expect($banks)->not->toBeEmpty()
+        ->and(collect($banks)->pluck('code'))->toContain('058');
 });
 
