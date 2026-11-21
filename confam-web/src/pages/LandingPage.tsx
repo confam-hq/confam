@@ -179,7 +179,7 @@ export default function LandingPage() {
               <Link to="/register" className="btn-primary h-12 w-full px-7 text-base sm:w-auto">
                 Start selling free <ArrowRight size={18} />
               </Link>
-              <Link to="/login" className="btn-ghost h-12 w-full px-7 text-base sm:w-auto">Try the demo</Link>
+              <Link to="/faq" className="btn-ghost h-12 w-full px-7 text-base sm:w-auto">How Confam works</Link>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted lg:justify-start">

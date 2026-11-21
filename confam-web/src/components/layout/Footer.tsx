@@ -8,6 +8,7 @@ export default function Footer() {
         <ConfamLogo size={26} />
         <p>5% vendor fee applies to new deals only and is withheld at settlement. Payments powered by Paystack.</p>
         <nav aria-label="Legal links" className="flex flex-wrap gap-4">
+          <Link to="/faq" className="hover:text-brand">FAQ</Link>
           <Link to="/terms" className="hover:text-brand">Terms</Link>
           <Link to="/privacy" className="hover:text-brand">Privacy</Link>
           <Link to="/cookies" className="hover:text-brand">Cookies</Link>

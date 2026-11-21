@@ -49,6 +49,7 @@ export default function Navbar() {
         <Link to={user ? homeFor(user.role) : "/"}><ConfamLogo size={32} /></Link>
         <div className="mx-4 hidden max-w-sm flex-1 md:block">{search}</div>
         <div className="ml-auto flex items-center gap-2">
+          <Link to="/faq" className="hidden text-sm font-semibold text-muted transition hover:text-brand sm:block">FAQ</Link>
           {user ? (
             <>
               <ThemeToggle />

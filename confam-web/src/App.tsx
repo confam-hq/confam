@@ -18,6 +18,7 @@ import BuyerDashboard from "./pages/dashboard/buyers/BuyerDashboard";
 import LegalPage from "./pages/LegalPage";
 import StatusPage from "./pages/StatusPage";
 import AppErrorBoundary from "./components/feedback/AppErrorBoundary";
+const FAQPage = lazy(() => import("./pages/FAQPage"));
 
 const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/terms" element={<LegalPage page="terms" />} />
             <Route path="/privacy" element={<LegalPage page="privacy" />} />
             <Route path="/cookies" element={<LegalPage page="cookies" />} />
+            <Route path="/faq" element={<FAQPage />} />
           </Route>
 
           <Route path="/deal/:code" element={<DealRoomPage />} />
